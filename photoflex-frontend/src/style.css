@@ -1,0 +1,124 @@
+/* PhotoFlex Theme Styles */
+
+:root {
+  --transition-speed: 200ms;
+}
+
+/* Light Theme Colors (White background, Black text) */
+[data-theme="light"] {
+  --bg-primary: #f8f8f8; /* Off-White */
+  --bg-secondary: #ffffff; /* White */
+  --text-primary: #1a1a1a; /* Very Dark Gray/Black */
+  --text-secondary: #4a4a4a; /* Dark Gray */
+  --border-color: #e0e0e0; /* Light Gray */
+  --shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Dark Theme Colors (Black background, White text) */
+[data-theme="dark"] {
+  --bg-primary: #121212; /* Nearly Black */
+  --bg-secondary: #1e1e1e; /* Dark Gray Background */
+  --text-primary: #f0f0f0; /* Off-White */
+  --text-secondary: #b0b0b0; /* Light Gray */
+  --border-color: #333333; /* Darker Gray */
+  --shadow-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Red Accent (Primary Action) */
+[data-accent="red"] {
+  --accent-50: #feeaea;
+  --accent-100: #fdd0d0;
+  --accent-400: #e53935; /* Bright Red */
+  --accent-500: #d32f2f; /* Standard Red */
+  --accent-600: #c62828;
+  --accent-700: #b71c1c;
+  --accent-900: #7f0000;
+}
+
+/* Gold Accent (Highlight) - Keeping a single gold for simplicity */
+[data-accent="gold"] {
+  --accent-50: #fffef2;
+  --accent-100: #fff9e0;
+  --accent-400: #ffc107; /* Standard Gold/Amber */
+  --accent-500: #ffb300;
+  --accent-600: #ff9800;
+  --accent-700: #f57f17;
+  --accent-900: #a1887f;
+}
+
+/* Remove original color accents (Pink, Purple, Blue, Green, Orange) to declutter.
+   Only keeping the necessary color accents based on the new scheme. */
+
+/* Utility Classes */
+.bg-gradient-accent {
+  /* New Red to Gold Gradient */
+  background: linear-gradient(to right, var(--accent-500), var(--accent-500, #ffb300));
+}
+
+.text-accent-400 {
+  color: var(--accent-400);
+}
+
+.text-accent-600 {
+  color: var(--accent-600);
+}
+
+.bg-accent-50 {
+  background-color: var(--accent-50);
+}
+
+.bg-accent-900\/20 {
+  background-color: rgb(from var(--accent-900) r g b / 0.2);
+}
+
+.border-accent-400 {
+  border-color: var(--accent-400);
+}
+
+.border-accent-500 {
+  border-color: var(--accent-500);
+}
+
+.ring-accent-400 {
+  --tw-ring-color: var(--accent-400);
+}
+
+.focus\:ring-accent-500:focus {
+  --tw-ring-color: var(--accent-500);
+}
+
+/* Animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color var(--transition-speed) ease,
+              color var(--transition-speed) ease,
+              border-color var(--transition-speed) ease;
+}
