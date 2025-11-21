@@ -1,7 +1,7 @@
 package com.example.appdev.poliquitoct6.service;
 
 import com.example.appdev.poliquitoct6.entity.Like;
-import com.example.appdev.poliquitoct6.repositor.LikeRepository;
+import com.example.appdev.poliquitoct6.repository.LikeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

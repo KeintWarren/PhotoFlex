@@ -3,12 +3,20 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+*.log                       # log files
+hs_err_pid*.log              # JVM crash logs
+*.hprof                      # Heap dumps
 
 # ========== Frontend ==========
 photoflex-frontend/node_modules/
 photoflex-frontend/dist/
 photoflex-frontend/build/
 photoflex-frontend/.env
+node_modules/
+dist/
+build/
+npm-debug.log
+yarn-error.log
 
 # ========== IDE / Editor ==========
 ### STS ###
@@ -19,6 +27,9 @@ photoflex-frontend/.env
 .settings
 .springBeans
 .sts4-cache
+*.iml
+*.idea/
+*.class
 
 ### IntelliJ IDEA ###
 .idea
@@ -42,3 +53,10 @@ build/
 # ========== OS ==========
 .DS_Store
 Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+
+# Application.properties
+/src/main/resources/application.properties

@@ -1,7 +1,7 @@
 package com.example.appdev.poliquitoct6.service;
 
 import com.example.appdev.poliquitoct6.entity.Pin;
-import com.example.appdev.poliquitoct6.repositor.PinRepository;
+import com.example.appdev.poliquitoct6.repository.PinRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

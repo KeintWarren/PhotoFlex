@@ -1,4 +1,4 @@
-package com.example.appdev.poliquitoct6.repositor;
+package com.example.appdev.poliquitoct6.repository;
 
 import com.example.appdev.poliquitoct6.entity.Like;
 import org.springframework.data.jpa.repository.JpaRepository;

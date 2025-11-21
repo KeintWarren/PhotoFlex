@@ -1,7 +1,7 @@
 package com.example.appdev.poliquitoct6.service;
 
 import com.example.appdev.poliquitoct6.entity.Comment;
-import com.example.appdev.poliquitoct6.repositor.CommentRepository;
+import com.example.appdev.poliquitoct6.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
