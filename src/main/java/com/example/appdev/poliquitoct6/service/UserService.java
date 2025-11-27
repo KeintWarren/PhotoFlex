@@ -1,7 +1,7 @@
 package com.example.appdev.poliquitoct6.service;
 
 import com.example.appdev.poliquitoct6.entity.User;
-import com.example.appdev.poliquitoct6.repositor.UserRepository;
+import com.example.appdev.poliquitoct6.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +16,7 @@ public class UserService {
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
-    }cd photoflex-frontend
-    Remove-Item -Recurse -Force .git
+    }
 
 
     public Optional<User> getUserById(Long id) {

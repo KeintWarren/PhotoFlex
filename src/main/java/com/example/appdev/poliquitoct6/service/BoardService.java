@@ -1,7 +1,7 @@
 package com.example.appdev.poliquitoct6.service;
 
 import com.example.appdev.poliquitoct6.entity.Board;
-import com.example.appdev.poliquitoct6.repositor.BoardRepository;
+import com.example.appdev.poliquitoct6.repository.BoardRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
