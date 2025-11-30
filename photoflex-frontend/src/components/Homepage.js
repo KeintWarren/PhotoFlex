@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Heart, MessageCircle, X } from 'lucide-react';
+import { Plus, Search, Grid } from 'lucide-react';
 import CreatePinModal from './CreatePinModal';
 import PinDetailModal from './PinDetailModal';
 
@@ -13,6 +13,16 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
   useEffect(() => {
     fetchPins();
     fetchBoards();
+
+    // Listen for navigation events from CreatePinModal
+    const handleNavigate = () => {
+      // This would be handled by parent App component ideally
+      // For now, just close the modal
+      setShowCreatePin(false);
+    };
+
+    window.addEventListener('navigate-to-profile', handleNavigate);
+    return () => window.removeEventListener('navigate-to-profile', handleNavigate);
   }, []);
 
   const fetchPins = async () => {
@@ -30,6 +40,7 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
       setBoards(data || []);
     } catch (e) {
       console.error('Failed to fetch boards:', e);
+      setBoards([]);
     }
   };
 
@@ -87,12 +98,35 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
 
         <button
           onClick={() => setShowCreatePin(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition" // Changed pink/purple gradient to red
+          className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition"
         >
           <Plus className="w-5 h-5" />
           Create Pin
         </button>
       </div>
+
+      {/* No Boards Warning Banner */}
+      {boards.length === 0 && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
+          <div className="flex items-start">
+            <Grid className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                You don't have any boards yet!
+              </h3>
+              <p className="text-sm text-yellow-700 mb-2">
+                Create a board first to organize your pins. Boards are like collections or folders for your pins.
+              </p>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-profile'))}
+                className="text-sm font-semibold text-yellow-800 hover:text-yellow-900 underline"
+              >
+                Go to Profile to Create a Board →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="relative mb-8">
@@ -101,7 +135,7 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
           placeholder="Search pins by title or description..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-4 pl-12 border border-gray-300 rounded-2xl bg-white focus:ring-2 focus:ring-red-400 focus:border-transparent transition shadow-sm" // Changed focus:ring-purple-400 to focus:ring-red-400
+          className="w-full p-4 pl-12 border border-gray-300 rounded-2xl bg-white focus:ring-2 focus:ring-red-400 focus:border-transparent transition shadow-sm"
         />
         <Search className="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
       </div>
@@ -131,7 +165,7 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
         </div>
       )}
 
-      {/* Modals - No color changes needed here, they will inherit styles */}
+      {/* Modals */}
       {showCreatePin && (
         <CreatePinModal
           currentUser={currentUser}

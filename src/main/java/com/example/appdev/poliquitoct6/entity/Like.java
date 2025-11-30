@@ -21,7 +21,6 @@ public class Like {
 
     private LocalDateTime createdDate;
 
-    // Getters and Setters
     public Long getLikeId() { return likeId; }
     public void setLikeId(Long likeId) { this.likeId = likeId; }
 

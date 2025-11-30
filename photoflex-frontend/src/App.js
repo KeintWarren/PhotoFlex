@@ -11,10 +11,29 @@ import MessageBar from './components/MessageBar';
 const API_URL = 'http://localhost:8080/api';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [view, setView] = useState('login');
+  // Initialize currentUser from sessionStorage
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = sessionStorage.getItem('currentUser');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [view, setView] = useState(() => {
+    return sessionStorage.getItem('currentView') || 'login';
+  });
+
   const [message, setMessage] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Save user and view to sessionStorage whenever they change
+  useEffect(() => {
+    if (currentUser) {
+      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+      sessionStorage.setItem('currentView', view);
+    } else {
+      sessionStorage.removeItem('currentUser');
+      sessionStorage.removeItem('currentView');
+    }
+  }, [currentUser, view]);
 
   // API Utility Function
   const apiFetch = async (endpoint, options = {}) => {
@@ -28,14 +47,25 @@ export default function App() {
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
-          const errorBody = await response.json();
-          if (errorBody.message) {
-            errorMessage = errorBody.message;
-          } else if (typeof errorBody === 'string') {
-            errorMessage = errorBody;
+          const errorBody = await response.text();
+          console.error('Error response body:', errorBody);
+
+          try {
+            const errorJson = JSON.parse(errorBody);
+            if (errorJson.message) {
+              errorMessage = errorJson.message;
+            } else if (errorJson.error) {
+              errorMessage = errorJson.error;
+            }
+          } catch (e) {
+            if (errorBody.includes('<!DOCTYPE') || errorBody.includes('<html')) {
+              errorMessage = `Server Error: ${response.status} - Check backend logs`;
+            } else if (errorBody.length > 0 && errorBody.length < 200) {
+              errorMessage = errorBody;
+            }
           }
         } catch (e) {
-          // Use default message
+          console.error('Error parsing response:', e);
         }
         throw new Error(errorMessage);
       }
@@ -47,7 +77,6 @@ export default function App() {
       return await response.json();
     } catch (error) {
       console.error('API Fetch Error:', error);
-      setMessage({ type: 'error', text: `Operation failed: ${error.message}` });
       throw error;
     }
   };
@@ -66,12 +95,14 @@ export default function App() {
         setMessage({ type: 'error', text: 'Invalid email or password.' });
       }
     } catch (e) {
-      setMessage({ type: 'error', text: 'Login failed. Check server status.' });
+      setMessage({ type: 'error', text: `Login failed: ${e.message}` });
     }
   };
 
   const handleSignup = async (signupData) => {
     setMessage(null);
+    console.log('Attempting signup with:', signupData);
+
     try {
       const newUser = await apiFetch('/users', {
         method: 'POST',
@@ -80,17 +111,21 @@ export default function App() {
           createdDate: new Date().toISOString()
         }),
       });
+
+      console.log('Signup successful:', newUser);
       setCurrentUser(newUser);
       setView('home');
       setMessage({ type: 'success', text: `Account created! Welcome, ${newUser.username}!` });
     } catch (e) {
-      setMessage({ type: 'error', text: 'Signup failed. User may already exist.' });
+      console.error('Signup error:', e);
+      setMessage({ type: 'error', text: `Signup failed: ${e.message}` });
     }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setView('login');
+    sessionStorage.clear(); // Clear session storage on logout
     setMessage({ type: 'info', text: 'You have been logged out.' });
   };
 
@@ -111,7 +146,6 @@ export default function App() {
     <div className="min-h-screen bg-gray-100 font-sans antialiased flex">
       <MessageBar message={message} setMessage={setMessage} />
 
-      {/* Sidebar */}
       <Sidebar
         view={view}
         setView={setView}
@@ -120,7 +154,6 @@ export default function App() {
         setIsOpen={setSidebarOpen}
       />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <Navbar
           currentUser={currentUser}

@@ -23,7 +23,6 @@ public class Pin {
     private String description;
     private LocalDateTime createdDate;
 
-    // Getters and Setters
     public Long getPinId() { return pinId; }
     public void setPinId(Long pinId) { this.pinId = pinId; }
 
