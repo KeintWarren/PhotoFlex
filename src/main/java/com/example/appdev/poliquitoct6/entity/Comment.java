@@ -21,7 +21,6 @@ public class Comment {
     private String text;
     private LocalDateTime createdDate;
 
-    // Getters and Setters
     public Long getCommentId() { return commentId; }
     public void setCommentId(Long commentId) { this.commentId = commentId; }
 

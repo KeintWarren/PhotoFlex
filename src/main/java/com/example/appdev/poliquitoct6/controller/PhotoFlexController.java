@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class PhotoFlexController {
 
     @Autowired private UserService userService;
@@ -54,6 +54,12 @@ public class PhotoFlexController {
     @GetMapping("/boards/{id}")
     public Optional<Board> getBoardById(@PathVariable Long id) {
         return boardService.getBoardById(id);
+    }
+
+    // *** NEW ENDPOINT ADDED ***
+    @GetMapping("/boards/user/{userId}")
+    public List<Board> getBoardsByUserId(@PathVariable Long userId) {
+        return boardService.getBoardsByUserId(userId);
     }
 
     @PostMapping("/boards")

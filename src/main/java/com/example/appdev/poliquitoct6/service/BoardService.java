@@ -22,6 +22,11 @@ public class BoardService {
         return boardRepository.findById(id);
     }
 
+    // THIS METHOD MUST BE HERE - ADD IT IF MISSING
+    public List<Board> getBoardsByUserId(Long userId) {
+        return boardRepository.findByUser_UserId(userId);
+    }
+
     public Board addBoard(Board board) {
         return boardRepository.save(board);
     }
