@@ -89,7 +89,11 @@ export default function PinDetailModal({ pin, currentUser, apiFetch, setMessage,
               <img
                 src={pin.imageURL}
                 alt={pin.title}
-                className="max-h-full max-w-full object-contain"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Error';
+                }}
               />
             </div>
           </div>
