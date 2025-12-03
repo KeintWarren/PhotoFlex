@@ -22,7 +22,7 @@ public class BoardService {
         return boardRepository.findById(id);
     }
 
-    // THIS METHOD MUST BE HERE - ADD IT IF MISSING
+    // Get boards by user ID
     public List<Board> getBoardsByUserId(Long userId) {
         return boardRepository.findByUser_UserId(userId);
     }
@@ -36,6 +36,7 @@ public class BoardService {
             board.setUser(updatedBoard.getUser());
             board.setTitle(updatedBoard.getTitle());
             board.setDescription(updatedBoard.getDescription());
+            board.setCoverImage(updatedBoard.getCoverImage());
             board.setVisibility(updatedBoard.getVisibility());
             board.setCreatedAt(updatedBoard.getCreatedAt());
             return boardRepository.save(board);

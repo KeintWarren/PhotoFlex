@@ -8,4 +8,7 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByPin_PinId(Long pinId);
+
+    // Add count method for getting total comments per pin
+    int countByPin_PinId(Long pinId);
 }
