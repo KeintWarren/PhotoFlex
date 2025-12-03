@@ -23,6 +23,14 @@ public class Pin {
     private String description;
     private LocalDateTime createdDate;
 
+    // Transient fields for counts (not stored in database, only for JSON response)
+    @Transient
+    private Integer likeCount;
+
+    @Transient
+    private Integer commentCount;
+
+    // Original Getters and Setters
     public Long getPinId() { return pinId; }
     public void setPinId(Long pinId) { this.pinId = pinId; }
 
@@ -43,4 +51,11 @@ public class Pin {
 
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }
+
+    // New Getters and Setters for counts
+    public Integer getLikeCount() { return likeCount; }
+    public void setLikeCount(Integer likeCount) { this.likeCount = likeCount; }
+
+    public Integer getCommentCount() { return commentCount; }
+    public void setCommentCount(Integer commentCount) { this.commentCount = commentCount; }
 }

@@ -11,4 +11,5 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
     List<Like> findByPin_PinId(Long pinId);
     Optional<Like> findByPin_PinIdAndUser_UserId(Long pinId, Long userId);
     void deleteByPin_PinIdAndUser_UserId(Long pinId, Long userId);
+    int countByPin_PinId(Long pinId);
 }

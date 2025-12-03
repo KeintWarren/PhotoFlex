@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { X, Image as ImageIcon, Grid } from 'lucide-react';
 
-export default function CreatePinModal({ currentUser, boards, apiFetch, setMessage, onClose, onPinCreated }) {
+export default function CreatePinModal({
+  currentUser,
+  boards,
+  apiFetch,
+  setMessage,
+  onClose,
+  onPinCreated,
+}) {
   const [newPin, setNewPin] = useState({
     title: '',
     description: '',
@@ -18,7 +25,6 @@ export default function CreatePinModal({ currentUser, boards, apiFetch, setMessa
     }
 
     try {
-      // Create pin with proper nested objects
       const pinToSave = {
         title: newPin.title,
         description: newPin.description,
@@ -41,8 +47,7 @@ export default function CreatePinModal({ currentUser, boards, apiFetch, setMessa
     }
   };
 
-  // If no boards exist, show a helpful message
-  if (boards.length === 0) {
+  if ((boards?.length || 0) === 0) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 animate-fade-in">
         <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl relative text-center">
@@ -55,20 +60,15 @@ export default function CreatePinModal({ currentUser, boards, apiFetch, setMessa
 
           <Grid className="w-16 h-16 text-red-600 mx-auto mb-4" />
 
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">
-            No Boards Yet!
-          </h2>
-
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">No Boards Yet!</h2>
           <p className="text-gray-600 mb-6">
             You need to create a board first before you can create pins.
-            Boards help you organize your pins by theme or topic.
           </p>
 
           <div className="space-y-3">
             <button
               onClick={() => {
                 onClose();
-                // Trigger navigation to profile - you'll need to pass a function to do this
                 window.dispatchEvent(new CustomEvent('navigate-to-profile'));
               }}
               className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition"
@@ -119,7 +119,7 @@ export default function CreatePinModal({ currentUser, boards, apiFetch, setMessa
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Board *
-              <span className="text-xs text-gray-500 ml-2">({boards.length} available)</span>
+              <span className="text-xs text-gray-500 ml-2">({boards?.length} available)</span>
             </label>
             <select
               value={newPin.boardId}
@@ -165,12 +165,11 @@ export default function CreatePinModal({ currentUser, boards, apiFetch, setMessa
               className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
             />
 
-            {/* Image Preview */}
             <div className="mt-4 h-64 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden border-2 border-gray-200">
               <img
                 src={newPin.imageURL}
-                alt="Preview"
-                className="w-full h-full object-contain"
+                alt="Preview of new pin"
+                className="w-full h-full object-cover" // <-- changed from object-contain to object-cover
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Invalid+URL';
@@ -182,12 +181,11 @@ export default function CreatePinModal({ currentUser, boards, apiFetch, setMessa
             </p>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
-            disabled={!newPin.boardId || boards.length === 0}
+            disabled={!newPin.boardId}
             className={`w-full flex items-center justify-center gap-2 text-white p-4 rounded-xl font-bold text-lg shadow-lg transition ${
-              !newPin.boardId || boards.length === 0
+              !newPin.boardId
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-red-600 to-red-700 hover:shadow-xl transform hover:scale-[1.01]'
             }`}
