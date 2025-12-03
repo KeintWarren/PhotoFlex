@@ -7,6 +7,7 @@ import Settings from './components/Settings';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import MessageBar from './components/MessageBar';
+import LogoutConfirmationModal from './components/LogoutConfirmationModal';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -23,6 +24,7 @@ export default function App() {
 
   const [message, setMessage] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Save user and view to sessionStorage whenever they change
   useEffect(() => {
@@ -122,11 +124,20 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = () => {
     setCurrentUser(null);
     setView('login');
-    sessionStorage.clear(); // Clear session storage on logout
+    sessionStorage.clear();
+    setShowLogoutConfirm(false);
     setMessage({ type: 'info', text: 'You have been logged out.' });
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirm(false);
   };
 
   if (!currentUser) {
@@ -157,7 +168,7 @@ export default function App() {
       <div className="flex-1 flex flex-col">
         <Navbar
           currentUser={currentUser}
-          onLogout={handleLogout}
+          onLogout={handleLogoutClick}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
 
@@ -186,6 +197,15 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <LogoutConfirmationModal
+          currentUser={currentUser}
+          onConfirm={handleLogoutConfirm}
+          onCancel={handleLogoutCancel}
+        />
+      )}
     </div>
   );
 }
