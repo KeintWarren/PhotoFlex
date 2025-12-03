@@ -1,47 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
-import CreatePinModal from './CreatePinModal';
-import PinDetailModal from './PinDetailModal';
+import React, { useState, useEffect } from "react";
+import { Plus, Search } from "lucide-react";
+import CreatePinModal from "./CreatePinModal";
+import PinDetailModal from "./PinDetailModal";
+import BoardDetailModal from "./BoardDetailModal";
 
 export default function Homepage({ currentUser, apiFetch, setMessage }) {
   const [pins, setPins] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [boards, setBoards] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [showCreatePin, setShowCreatePin] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
+  const [selectedBoard, setSelectedBoard] = useState(null);
 
+  // Fetch pins & boards after currentUser is ready
   useEffect(() => {
+    if (!currentUser?.userId) return;
+
+    const fetchPins = async () => {
+      try {
+        const data = await apiFetch("/pins");
+        setPins(data || []);
+      } catch (e) {
+        console.error("Failed to fetch pins:", e);
+      }
+    };
+
+    const fetchBoards = async () => {
+      try {
+        console.log("Fetching boards for user:", currentUser.userId);
+        const data = await apiFetch(`/boards/user/${currentUser.userId}`);
+        console.log("Boards fetched:", data);
+        setBoards(data || []);
+      } catch (e) {
+        console.error("Failed to fetch boards:", e);
+      }
+    };
+
     fetchPins();
-
-    const handleNavigate = () => setShowCreatePin(false);
-    window.addEventListener('navigate-to-profile', handleNavigate);
-    return () => window.removeEventListener('navigate-to-profile', handleNavigate);
-  }, []);
-
-  const fetchPins = async () => {
-    try {
-      const data = await apiFetch('/pins');
-      setPins(data || []);
-    } catch (e) {
-      console.error('Failed to fetch pins:', e);
-    }
-  };
+    fetchBoards();
+  }, [currentUser, apiFetch]);
 
   const handlePinClick = async (pin) => {
     try {
       const pinDetails = await apiFetch(`/pins/${pin.pinId}`);
       const likeCount = await apiFetch(`/likes/pin/${pin.pinId}/count`);
-      const isLiked = await apiFetch(`/likes/pin/${pin.pinId}/user/${currentUser.userId}`);
+      const isLiked = await apiFetch(
+        `/likes/pin/${pin.pinId}/user/${currentUser.userId}`
+      );
 
       setSelectedPin({ ...pinDetails, likeCount, isLiked });
     } catch (e) {
-      console.error('Failed to fetch pin details:', e);
+      console.error("Failed to fetch pin details:", e);
     }
   };
-
-  const filteredPins = pins.filter(pin =>
-    pin.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pin.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const PinCard = ({ pin }) => (
     <div
@@ -50,20 +62,30 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
     >
       <div className="w-full h-64 overflow-hidden">
         <img
-          src={pin.imageURL || 'https://placehold.co/600x400/3B82F6/ffffff?text=No+Image'}
-          alt={pin.title}
+          src={
+            pin.imageURL ||
+            "https://placehold.co/600x400/3B82F6/ffffff?text=No+Image"
+          }
+          alt={pin.title || "Pin image"}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Error';
-          }}
         />
       </div>
+
       <div className="p-4 h-28 flex flex-col justify-between">
-        <h3 className="font-bold text-gray-800 text-lg truncate">{pin.title}</h3>
-        <p className="text-gray-600 text-sm line-clamp-2">{pin.description}</p>
+        <h3 className="font-bold text-gray-800 text-lg truncate">
+          {pin.title}
+        </h3>
+        <p className="text-gray-600 text-sm line-clamp-2">
+          {pin.description}
+        </p>
       </div>
     </div>
+  );
+
+  const filteredPins = pins.filter(
+    (pin) =>
+      pin.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pin.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -72,7 +94,9 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-extrabold text-gray-800">Discover Pins</h2>
-          <p className="text-gray-600 mt-1">Explore creative ideas and inspiration</p>
+          <p className="text-gray-600 mt-1">
+            Explore creative ideas and inspiration
+          </p>
         </div>
 
         <button
@@ -100,9 +124,9 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
       {filteredPins.length > 0 ? (
         <div
           className="grid gap-6"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))" }}
         >
-          {filteredPins.map(pin => (
+          {filteredPins.map((pin) => (
             <PinCard key={pin.pinId} pin={pin} />
           ))}
         </div>
@@ -110,10 +134,12 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
         <div className="text-center p-16 bg-white rounded-2xl shadow-sm">
           <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-xl font-semibold text-gray-600 mb-2">
-            {searchTerm ? `No results for "${searchTerm}"` : 'No pins available yet'}
+            {searchTerm ? `No results for "${searchTerm}"` : "No pins available yet"}
           </p>
           <p className="text-gray-500">
-            {searchTerm ? 'Try a different search term' : 'Create your first pin to get started!'}
+            {searchTerm
+              ? "Try a different search term"
+              : "Create your first pin to get started!"}
           </p>
         </div>
       )}
@@ -122,6 +148,7 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
       {showCreatePin && (
         <CreatePinModal
           currentUser={currentUser}
+          boards={boards}
           apiFetch={apiFetch}
           setMessage={setMessage}
           onClose={() => setShowCreatePin(false)}
@@ -141,8 +168,21 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
           onClose={() => setSelectedPin(null)}
           onPinUpdated={(updatedPin) => {
             setSelectedPin(updatedPin);
-            setPins(pins.map(p => p.pinId === updatedPin.pinId ? updatedPin : p));
+            setPins((prev) =>
+              prev.map((p) => (p.pinId === updatedPin.pinId ? updatedPin : p))
+            );
           }}
+        />
+      )}
+
+      {selectedBoard && (
+        <BoardDetailModal
+          board={selectedBoard}
+          currentUser={currentUser}
+          apiFetch={apiFetch}
+          setMessage={setMessage}
+          onClose={() => setSelectedBoard(null)}
+          onPinClick={handlePinClick}
         />
       )}
     </div>

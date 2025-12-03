@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Grid, Lock, Globe } from 'lucide-react';
+import { Plus, Grid, Lock, Globe, Edit2 } from 'lucide-react';
 import CreateBoardModal from './CreateBoardModal';
 import BoardDetailModal from './BoardDetailModal';
 import PinDetailModal from './PinDetailModal';
+import EditBoardModal from './EditBoardModal';
 
 export default function Profile({ currentUser, apiFetch, setMessage }) {
   const [boards, setBoards] = useState([]);
@@ -10,18 +11,51 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [selectedBoard, setSelectedBoard] = useState(null);
   const [selectedPin, setSelectedPin] = useState(null);
+  const [editingBoard, setEditingBoard] = useState(null);
 
   useEffect(() => {
     fetchBoards();
     fetchUserPins();
   }, []);
 
-  // Fetch boards for current user
+  // Fetch boards for current user with pin stats
   const fetchBoards = async () => {
     try {
       const data = await apiFetch(`/boards/user/${currentUser.userId}`);
-      console.log('Fetched Boards:', data); // Debug
-      setBoards(data || []);
+      console.log('🎯 Fetched Boards:', data);
+
+      // Fetch stats for each board
+      const boardsWithStats = await Promise.all(
+        data.map(async (board) => {
+          try {
+            const boardPins = await apiFetch(`/pins/board/${board.boardId}`);
+            console.log(`📌 Board "${board.title}" pins:`, boardPins);
+
+            boardPins.forEach(pin => {
+              console.log(`  - Pin "${pin.title}": likes=${pin.likeCount}, comments=${pin.commentCount}`);
+            });
+
+            const totalLikes = boardPins.reduce((sum, pin) => sum + (pin.likeCount || 0), 0);
+            const totalComments = boardPins.reduce((sum, pin) => sum + (pin.commentCount || 0), 0);
+            const coverImage = boardPins.length > 0 ? boardPins[0].imageURL : null;
+
+            console.log(`📊 Board "${board.title}" stats: ${boardPins.length} pins, ${totalLikes} likes, ${totalComments} comments`);
+
+            return {
+              ...board,
+              pinCount: boardPins.length,
+              totalLikes,
+              totalComments,
+              coverImage: board.coverImage || coverImage
+            };
+          } catch (e) {
+            console.error(`Failed to fetch stats for board ${board.boardId}:`, e);
+            return { ...board, pinCount: 0, totalLikes: 0, totalComments: 0 };
+          }
+        })
+      );
+
+      setBoards(boardsWithStats || []);
     } catch (e) {
       console.error('Failed to fetch boards:', e);
       setMessage({ type: 'error', text: 'Failed to fetch boards.' });
@@ -57,53 +91,90 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
     fetchBoards();
   };
 
+  // Update board after edits
+  const handleBoardUpdated = (updatedBoard) => {
+    fetchBoards(); // Refresh all boards to get updated stats
+    setEditingBoard(null);
+  };
+
   // Board card component
   const BoardCard = ({ board }) => (
     <div
       key={board.boardId}
-      className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
-      onClick={() => setSelectedBoard(board)}
+      className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group relative"
     >
-      <div className="h-40 w-full overflow-hidden relative">
-        <img
-          src={
-            board.coverImage && board.coverImage.startsWith('http')
-              ? board.coverImage
-              : 'https://placehold.co/600x400/3B82F6/ffffff?text=No+Image'
-          }
-          alt={board.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Error';
-          }}
-        />
-        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-all"></div>
-      </div>
+      {/* Edit Button Overlay */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditingBoard(board);
+        }}
+        className="absolute top-3 right-3 z-10 bg-white/90 backdrop-blur-sm p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
+        title="Edit Board"
+      >
+        <Edit2 className="w-4 h-4 text-gray-700" />
+      </button>
 
-      <div className="p-5">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-bold text-gray-800 flex-1 line-clamp-1">{board.title}</h3>
-          {board.visibility === 'public' ? (
-            <Globe className="w-5 h-5 text-green-500" title="Public" />
-          ) : (
-            <Lock className="w-5 h-5 text-red-500" title="Private" />
-          )}
+      <div
+        className="cursor-pointer"
+        onClick={() => setSelectedBoard(board)}
+      >
+        <div className="h-40 w-full overflow-hidden relative">
+          <img
+            src={
+              board.coverImage && board.coverImage.startsWith('http')
+                ? board.coverImage
+                : 'https://placehold.co/600x400/3B82F6/ffffff?text=No+Image'
+            }
+            alt={board.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Error';
+            }}
+          />
+          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-all"></div>
         </div>
-        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-          {board.description || 'No description'}
-        </p>
-        <div className="flex justify-between items-center text-xs text-gray-500">
-          <span
-            className={`px-3 py-1 rounded-full font-medium ${
-              board.visibility === 'public'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-red-100 text-red-700'
-            }`}
-          >
-            {board.visibility}
-          </span>
-          <span>{new Date(board.createdAt).toLocaleDateString()}</span>
+
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-xl font-bold text-gray-800 flex-1 line-clamp-1">{board.title}</h3>
+            {board.visibility === 'public' ? (
+              <Globe className="w-5 h-5 text-green-500" title="Public" />
+            ) : (
+              <Lock className="w-5 h-5 text-red-500" title="Private" />
+            )}
+          </div>
+          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+            {board.description || 'No description'}
+          </p>
+
+          {/* Stats Row */}
+          <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
+            <span className="flex items-center gap-1">
+              <Grid className="w-4 h-4" />
+              {board.pinCount || 0} pins
+            </span>
+            <span className="flex items-center gap-1 text-red-500">
+              ❤ {board.totalLikes || 0}
+            </span>
+            <span className="flex items-center gap-1 text-blue-500">
+              💬 {board.totalComments || 0}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center text-xs text-gray-500">
+            <span
+              className={`px-3 py-1 rounded-full font-medium ${
+                board.visibility === 'public'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
+              }`}
+            >
+              {board.visibility}
+            </span>
+            <span>{new Date(board.createdAt).toLocaleDateString()}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -179,9 +250,21 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
           setMessage={setMessage}
           onClose={() => setShowCreateBoard(false)}
           onBoardCreated={(newBoard) => {
-            setBoards([newBoard, ...boards]);
+            fetchBoards(); // Refresh to get stats
             setShowCreateBoard(false);
           }}
+        />
+      )}
+
+      {/* Edit Board Modal */}
+      {editingBoard && (
+        <EditBoardModal
+          board={editingBoard}
+          currentUser={currentUser}
+          apiFetch={apiFetch}
+          setMessage={setMessage}
+          onClose={() => setEditingBoard(null)}
+          onBoardUpdated={handleBoardUpdated}
         />
       )}
 
@@ -197,6 +280,7 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
             setSelectedBoard(null);
             handlePinClick(pin);
           }}
+          onBoardUpdated={fetchBoards}
         />
       )}
 

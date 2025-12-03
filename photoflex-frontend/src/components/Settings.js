@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+    import React, { useState } from 'react';
 import { Save, User, Mail, Lock, Image, FileText } from 'lucide-react';
 
 export default function Settings({ currentUser, setCurrentUser, apiFetch, setMessage }) {
