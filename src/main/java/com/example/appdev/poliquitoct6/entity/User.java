@@ -1,6 +1,8 @@
 package com.example.appdev.poliquitoct6.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -16,6 +18,9 @@ public class User {
     private String password;
     private String profilePicture;
     private String bio;
+
+    @CreationTimestamp
+    @Column(name = "created_date")
     private LocalDateTime createdDate;
 
     public Long getUserId() { return userId; }

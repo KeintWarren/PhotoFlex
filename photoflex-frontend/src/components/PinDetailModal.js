@@ -2,18 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { X, Heart, MessageCircle, Send } from 'lucide-react';
 import UserProfileModal from './UserProfileModal';
 
-export default function PinDetailModal({
-  pin,
-  currentUser,
-  apiFetch,
-  setMessage,
-  onClose,
-  onPinUpdated,
-}) {
+export default function PinDetailModal({ pin, currentUser, apiFetch, setMessage, onClose, onPinUpdated }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  // Initialize state using pin props, ensure consistency
   const [isLiked, setIsLiked] = useState(pin.isLiked || false);
   const [likeCount, setLikeCount] = useState(pin.likeCount || 0);
+
   const [allUsers, setAllUsers] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -22,8 +17,10 @@ export default function PinDetailModal({
 
   useEffect(() => {
     fetchComments();
-    fetchUsers();
-  }, []);
+    fetchUsers(); // Note: This fetches ALL users and can be a performance hit
+  }, [pin.pinId]); // Re-fetch when the pin changes
+
+  // --- API FETCH FUNCTIONS ---
 
   const fetchComments = async () => {
     try {
@@ -43,34 +40,54 @@ export default function PinDetailModal({
     }
   };
 
+  // --- ACTION HANDLERS ---
+
   const handleToggleLike = async () => {
     try {
+      const newIsLiked = !isLiked;
+      const newLikeCount = newIsLiked ? likeCount + 1 : likeCount - 1;
+
       if (isLiked) {
+        // DELETE like
         await apiFetch(`/likes/pin/${pin.pinId}/user/${currentUser.userId}`, { method: 'DELETE' });
-        setIsLiked(false);
-        setLikeCount(prev => prev - 1);
       } else {
+        // POST like
         const likePayload = {
           pin: { pinId: pin.pinId },
           user: { userId: currentUser.userId },
           createdDate: new Date().toISOString(),
         };
         await apiFetch('/likes', { method: 'POST', body: JSON.stringify(likePayload) });
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
       }
 
-      if (onPinUpdated) onPinUpdated();
+      // 1. Update local state immediately (Optimistic UI)
+      setIsLiked(newIsLiked);
+      setLikeCount(newLikeCount);
+
+      // 2. CRITICAL FIX: Pass the updated pin object to the parent component (Homepage)
+      if (onPinUpdated) {
+        const updatedPin = {
+          ...pin,
+          isLiked: newIsLiked,
+          likeCount: newLikeCount,
+        };
+        onPinUpdated(updatedPin);
+      }
+
     } catch (e) {
       console.error(e);
-      setMessage({ type: 'error', text: 'Failed to toggle like.' });
+      // Revert state if the API call fails
+      setIsLiked(isLiked);
+      setLikeCount(likeCount);
+      setMessage({ type: 'error', text: 'Failed to toggle like status.' });
     }
   };
 
-  const handleCommentChange = e => {
+  const handleCommentChange = (e) => {
     const value = e.target.value;
     setNewComment(value);
 
+    // Logic for user mentions
     const lastAtIndex = value.lastIndexOf('@');
     if (lastAtIndex !== -1 && (lastAtIndex === 0 || value[lastAtIndex - 1] === ' ')) {
       const searchTerm = value.slice(lastAtIndex + 1).toLowerCase();
@@ -85,7 +102,7 @@ export default function PinDetailModal({
     }
   };
 
-  const handleSelectUser = user => {
+  const handleSelectUser = (user) => {
     const beforeMention = newComment.slice(0, mentionStart);
     const afterMention = newComment.slice(mentionStart).replace(/@\w*/, `@${user.username} `);
     setNewComment(beforeMention + afterMention);
@@ -95,13 +112,15 @@ export default function PinDetailModal({
   const handleAddComment = async () => {
     if (newComment.trim() === '') return;
     try {
-      const payload = {
+      const commentToSave = {
         text: newComment,
         pin: { pinId: pin.pinId },
         user: { userId: currentUser.userId },
         createdDate: new Date().toISOString(),
       };
-      const newCmt = await apiFetch('/comments', { method: 'POST', body: JSON.stringify(payload) });
+      const newCmt = await apiFetch('/comments', { method: 'POST', body: JSON.stringify(commentToSave) });
+
+      // Add the new comment with the full user object for rendering
       setComments([...comments, { ...newCmt, user: currentUser }]);
       setNewComment('');
       setMessage({ type: 'success', text: 'Comment added!' });
@@ -110,7 +129,9 @@ export default function PinDetailModal({
     }
   };
 
-  const renderCommentWithMentions = text => {
+  // --- RENDERING HELPERS ---
+
+  const renderCommentWithMentions = (text) => {
     const parts = text.split(/(@\w+)/g);
     return parts.map((part, idx) => {
       if (part.startsWith('@')) {
@@ -119,10 +140,7 @@ export default function PinDetailModal({
         return (
           <span
             key={idx}
-            onClick={e => {
-              e.stopPropagation();
-              if (mentionedUser) setSelectedUserProfile(mentionedUser);
-            }}
+            onClick={(e) => { e.stopPropagation(); if (mentionedUser) setSelectedUserProfile(mentionedUser); }}
             className="text-red-600 font-semibold cursor-pointer hover:underline"
           >
             {part}
@@ -133,14 +151,22 @@ export default function PinDetailModal({
     });
   };
 
-  const handleUserClick = user => setSelectedUserProfile(user);
+  const handleUserClick = (user) => {
+    // Check if the user object is valid before opening the modal
+    if (user && user.userId) {
+        setSelectedUserProfile(user);
+    }
+  }
+
+  // --- COMPONENT RENDER ---
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 animate-fade-in">
+      {/* FIXED SIZE PIN DETAIL MODAL */}
+      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl relative">
 
-          {/* Close Button */}
+          {/* Close */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-700 z-10 transition"
@@ -155,7 +181,7 @@ export default function PinDetailModal({
                 <img
                   src={pin.imageURL}
                   alt={pin.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover" // FITS FULL CONTAINER
                   onError={e => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Error'; }}
                 />
               </div>
@@ -229,67 +255,66 @@ export default function PinDetailModal({
                   )}
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Add Comment */}
-              <div className="border-t p-4 bg-white relative">
-                {showSuggestions && (
-                  <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
-                    {filteredUsers.map(user => (
-                      <div
-                        key={user.userId}
-                        onClick={() => handleSelectUser(user)}
-                        className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer"
-                      >
-                        <img
-                          src={user.profilePicture || 'https://placehold.co/32x32/A855F7/ffffff?text=U'}
-                          alt={user.username}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                        <div>
-                          <p className="font-semibold text-sm text-gray-800">{user.username}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add a comment... (type @ to mention users)"
-                    value={newComment}
-                    onChange={handleCommentChange}
-                    onKeyPress={e => e.key === 'Enter' && !showSuggestions && handleAddComment()}
-                    className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
-                  />
-                  <button
-                    onClick={handleAddComment}
-                    disabled={newComment.trim() === ''}
-                    className={`p-3 rounded-xl transition ${newComment.trim() === '' ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-lg'}`}
+          {/* Add Comment */}
+          <div className="border-t p-4 bg-white relative">
+            {showSuggestions && (
+              <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+                {filteredUsers.map(user => (
+                  <div
+                    key={user.userId}
+                    onClick={() => handleSelectUser(user)}
+                    className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer"
                   >
-                    <Send className="w-5 h-5" />
-                  </button>
-                </div>
+                    <img
+                      src={user.profilePicture || 'https://placehold.co/32x32/A855F7/ffffff?text=U'}
+                      alt={user.username}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="font-semibold text-sm text-gray-800">{user.username}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
 
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add a comment... (type @ to mention users)"
+                value={newComment}
+                onChange={handleCommentChange}
+                onKeyPress={e => e.key === 'Enter' && !showSuggestions && handleAddComment()}
+                className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+              />
+              <button
+                onClick={handleAddComment}
+                disabled={newComment.trim() === ''}
+                className={`p-3 rounded-xl transition ${newComment.trim() === '' ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-lg'}`}
+              >
+                <Send className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
-
-        {/* USER PROFILE MODAL */}
-        {selectedUserProfile && (
-          <UserProfileModal
-            user={selectedUserProfile}
-            currentUser={currentUser}
-            apiFetch={apiFetch}
-            setMessage={setMessage}
-            onClose={() => setSelectedUserProfile(null)}
-            onPinClick={() => {}}
-            compactView={true} // optional
-          />
-        )}
       </div>
+
+      {/* USER PROFILE MODAL */}
+      {selectedUserProfile && (
+        <UserProfileModal
+          user={selectedUserProfile}
+          currentUser={currentUser}
+          apiFetch={apiFetch}
+          setMessage={setMessage}
+          onClose={() => setSelectedUserProfile(null)}
+          onPinClick={() => {}}
+          compactView={true}
+        />
+      )}
     </>
   );
 }
