@@ -60,3 +60,6 @@ Thumbs.db
 
 # Application.properties
 /src/main/resources/application.properties
+
+# Package-lock.json
+package-lock.json

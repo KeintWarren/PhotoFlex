@@ -1,0 +1,72 @@
+package com.example.appdev.poliquitoct6.dto;
+
+import java.time.LocalDateTime;
+
+public class UserDTO {
+
+    private Long userId;
+    private String username;
+    private String email;
+    private String profilePicture;
+    private String bio;
+    private LocalDateTime createdDate;
+
+    public UserDTO(){}
+
+    public UserDTO(Long userId, String username, String email, String profilePicture, String bio, LocalDateTime createdDate) {
+        this.userId = userId;
+        this.username = username;
+        this.email = email;
+        this.profilePicture = profilePicture;
+        this.bio = bio;
+        this.createdDate = createdDate;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public LocalDateTime getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(LocalDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+}
