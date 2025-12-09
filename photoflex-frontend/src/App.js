@@ -86,13 +86,15 @@ export default function App() {
   const handleLogin = async (loginData) => {
     setMessage(null);
     try {
-      const allUsers = await apiFetch('/users');
-      const user = allUsers.find(u => u.email === loginData.email && u.password === loginData.password);
+      const response = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(loginData),
+      });
 
-      if (user) {
-        setCurrentUser(user);
+      if (response?.user) {
+        setCurrentUser(response.user);
         setView('home');
-        setMessage({ type: 'success', text: `Welcome back, ${user.username}!` });
+        setMessage({ type: 'success', text: response.message || `Welcome back, ${response.user.username}!` });
       } else {
         setMessage({ type: 'error', text: 'Invalid email or password.' });
       }
@@ -106,18 +108,21 @@ export default function App() {
     console.log('Attempting signup with:', signupData);
 
     try {
-      const newUser = await apiFetch('/users', {
+      const response = await apiFetch('/auth/signup', {
         method: 'POST',
         body: JSON.stringify({
           ...signupData,
-          createdDate: new Date().toISOString()
         }),
       });
 
-      console.log('Signup successful:', newUser);
-      setCurrentUser(newUser);
-      setView('home');
-      setMessage({ type: 'success', text: `Account created! Welcome, ${newUser.username}!` });
+      if (response?.user) {
+        console.log('Signup successful:', response.user);
+        setCurrentUser(response.user);
+        setView('home');
+        setMessage({ type: 'success', text: response.message || `Account created! Welcome, ${response.user.username}!` });
+      } else {
+        setMessage({ type: 'error', text: 'Signup failed. Please try again.' });
+      }
     } catch (e) {
       console.error('Signup error:', e);
       setMessage({ type: 'error', text: `Signup failed: ${e.message}` });
