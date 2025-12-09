@@ -1,5 +1,6 @@
 package com.example.appdev.poliquitoct6.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -12,7 +13,12 @@ public class User {
     private Long userId;
 
     private String username;
+
+    @Column(nullable = false, unique = true)
     private String email;
+
+    @JsonIgnore
+    @Column(nullable = false)
     private String password;
     private String profilePicture;
     private String bio;
