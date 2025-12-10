@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Homepage from './components/Homepage';
@@ -11,6 +12,106 @@ import LogoutConfirmationModal from './components/LogoutConfirmationModal';
 
 const API_URL = 'http://localhost:8080/api';
 
+// Protected Route Component
+function ProtectedRoute({ children, currentUser }) {
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// Auth Route Component (redirects to home if already logged in)
+function AuthRoute({ children, currentUser }) {
+  if (currentUser) {
+    return <Navigate to="/home" replace />;
+  }
+  return children;
+}
+
+// Main App Layout Component
+function AppLayout({
+  currentUser,
+  setCurrentUser,
+  apiFetch,
+  message,
+  setMessage,
+  handleLogoutClick,
+  showLogoutConfirm,
+  handleLogoutConfirm,
+  handleLogoutCancel
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gray-100 font-sans antialiased flex">
+      <MessageBar message={message} setMessage={setMessage} />
+
+      <Sidebar
+        currentUser={currentUser}
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+        navigate={navigate}
+      />
+
+      <div className="flex-1 flex flex-col">
+        <Navbar
+          currentUser={currentUser}
+          onLogout={handleLogoutClick}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
+
+        <main className="flex-1 p-4 md:p-8">
+          <Routes>
+            <Route
+              path="/home"
+              element={
+                <Homepage
+                  currentUser={currentUser}
+                  apiFetch={apiFetch}
+                  setMessage={setMessage}
+                />
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <Profile
+                  currentUser={currentUser}
+                  apiFetch={apiFetch}
+                  setMessage={setMessage}
+                />
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <Settings
+                  currentUser={currentUser}
+                  setCurrentUser={setCurrentUser}
+                  apiFetch={apiFetch}
+                  setMessage={setMessage}
+                />
+              }
+            />
+            <Route path="*" element={<Navigate to="/home" replace />} />
+          </Routes>
+        </main>
+      </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <LogoutConfirmationModal
+          currentUser={currentUser}
+          onConfirm={handleLogoutConfirm}
+          onCancel={handleLogoutCancel}
+        />
+      )}
+    </div>
+  );
+}
+
+// Main App Component
 export default function App() {
   // Initialize currentUser from sessionStorage
   const [currentUser, setCurrentUser] = useState(() => {
@@ -18,24 +119,17 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [view, setView] = useState(() => {
-    return sessionStorage.getItem('currentView') || 'login';
-  });
-
   const [message, setMessage] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Save user and view to sessionStorage whenever they change
+  // Save user to sessionStorage whenever it changes
   useEffect(() => {
     if (currentUser) {
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-      sessionStorage.setItem('currentView', view);
     } else {
       sessionStorage.removeItem('currentUser');
-      sessionStorage.removeItem('currentView');
     }
-  }, [currentUser, view]);
+  }, [currentUser]);
 
   // API Utility Function
   const apiFetch = async (endpoint, options = {}) => {
@@ -83,7 +177,7 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (loginData) => {
+  const handleLogin = async (loginData, navigate) => {
     setMessage(null);
     try {
       const response = await apiFetch('/auth/login', {
@@ -93,8 +187,8 @@ export default function App() {
 
       if (response?.user) {
         setCurrentUser(response.user);
-        setView('home');
         setMessage({ type: 'success', text: response.message || `Welcome back, ${response.user.username}!` });
+        navigate('/home');
       } else {
         setMessage({ type: 'error', text: 'Invalid email or password.' });
       }
@@ -103,23 +197,21 @@ export default function App() {
     }
   };
 
-  const handleSignup = async (signupData) => {
+  const handleSignup = async (signupData, navigate) => {
     setMessage(null);
     console.log('Attempting signup with:', signupData);
 
     try {
       const response = await apiFetch('/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({
-          ...signupData,
-        }),
+        body: JSON.stringify(signupData),
       });
 
       if (response?.user) {
         console.log('Signup successful:', response.user);
         setCurrentUser(response.user);
-        setView('home');
         setMessage({ type: 'success', text: response.message || `Account created! Welcome, ${response.user.username}!` });
+        navigate('/home');
       } else {
         setMessage({ type: 'error', text: 'Signup failed. Please try again.' });
       }
@@ -135,82 +227,64 @@ export default function App() {
 
   const handleLogoutConfirm = () => {
     setCurrentUser(null);
-    setView('login');
     sessionStorage.clear();
     setShowLogoutConfirm(false);
     setMessage({ type: 'info', text: 'You have been logged out.' });
+    // Navigation will happen automatically via AuthRoute redirect
   };
 
   const handleLogoutCancel = () => {
     setShowLogoutConfirm(false);
   };
 
-  if (!currentUser) {
-    return (
+  return (
+    <BrowserRouter>
       <div className="font-sans antialiased">
         <MessageBar message={message} setMessage={setMessage} />
-        {view === 'login' ? (
-          <Login onLogin={handleLogin} onSwitch={() => setView('signup')} />
-        ) : (
-          <Signup onSignup={handleSignup} onSwitch={() => setView('login')} />
-        )}
+
+        <Routes>
+          {/* Auth Routes */}
+          <Route
+            path="/login"
+            element={
+              <AuthRoute currentUser={currentUser}>
+                <Login onLogin={handleLogin} />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <AuthRoute currentUser={currentUser}>
+                <Signup onSignup={handleSignup} />
+              </AuthRoute>
+            }
+          />
+
+          {/* Protected Routes */}
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <AppLayout
+                  currentUser={currentUser}
+                  setCurrentUser={setCurrentUser}
+                  apiFetch={apiFetch}
+                  message={message}
+                  setMessage={setMessage}
+                  handleLogoutClick={handleLogoutClick}
+                  showLogoutConfirm={showLogoutConfirm}
+                  handleLogoutConfirm={handleLogoutConfirm}
+                  handleLogoutCancel={handleLogoutCancel}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+        </Routes>
       </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100 font-sans antialiased flex">
-      <MessageBar message={message} setMessage={setMessage} />
-
-      <Sidebar
-        view={view}
-        setView={setView}
-        currentUser={currentUser}
-        isOpen={sidebarOpen}
-        setIsOpen={setSidebarOpen}
-      />
-
-      <div className="flex-1 flex flex-col">
-        <Navbar
-          currentUser={currentUser}
-          onLogout={handleLogoutClick}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        />
-
-        <main className="flex-1 p-4 md:p-8">
-          {view === 'home' && (
-            <Homepage
-              currentUser={currentUser}
-              apiFetch={apiFetch}
-              setMessage={setMessage}
-            />
-          )}
-          {view === 'profile' && (
-            <Profile
-              currentUser={currentUser}
-              apiFetch={apiFetch}
-              setMessage={setMessage}
-            />
-          )}
-          {view === 'settings' && (
-            <Settings
-              currentUser={currentUser}
-              setCurrentUser={setCurrentUser}
-              apiFetch={apiFetch}
-              setMessage={setMessage}
-            />
-          )}
-        </main>
-      </div>
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <LogoutConfirmationModal
-          currentUser={currentUser}
-          onConfirm={handleLogoutConfirm}
-          onCancel={handleLogoutCancel}
-        />
-      )}
-    </div>
+    </BrowserRouter>
   );
 }

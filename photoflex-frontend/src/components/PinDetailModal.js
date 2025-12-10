@@ -10,39 +10,58 @@ export default function PinDetailModal({
   onClose,
   onPinUpdated,
 }) {
+
+  // ✅ ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [isLiked, setIsLiked] = useState(pin.isLiked || false);
-  const [likeCount, setLikeCount] = useState(pin.likeCount || 0);
+  const [isLiked, setIsLiked] = useState(pin?.isLiked || false);
+  const [likeCount, setLikeCount] = useState(pin?.likeCount || 0);
+
   const [allUsers, setAllUsers] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [mentionStart, setMentionStart] = useState(-1);
+
   const [selectedUserProfile, setSelectedUserProfile] = useState(null);
 
+  // ✅ useEffect with conditional logic INSIDE
   useEffect(() => {
+    // Only fetch if pin is valid
+    if (!pin || !pin.pinId) {
+      return;
+    }
+
+    const fetchComments = async () => {
+      try {
+        const data = await apiFetch(`/comments/pin/${pin.pinId}`);
+        setComments(data || []);
+      } catch (e) {
+        console.error('Failed to fetch comments:', e);
+      }
+    };
+
+    const fetchUsers = async () => {
+      try {
+        const data = await apiFetch('/users');
+        setAllUsers(data || []);
+      } catch (e) {
+        console.error('Failed to fetch users:', e);
+      }
+    };
+
     fetchComments();
     fetchUsers();
-  }, []);
+  }, [pin, apiFetch]);
 
-  const fetchComments = async () => {
-    try {
-      const data = await apiFetch(`/comments/pin/${pin.pinId}`);
-      setComments(data || []);
-    } catch (e) {
-      console.error('Failed to fetch comments:', e);
-    }
-  };
+  // ✅ SAFE EARLY RETURN (AFTER ALL HOOKS)
+  if (!pin || !pin.pinId) {
+    console.error("PinDetailModal rendered without a valid 'pin' prop.");
+    return null;
+  }
 
-  const fetchUsers = async () => {
-    try {
-      const data = await apiFetch('/users');
-      setAllUsers(data || []);
-    } catch (e) {
-      console.error('Failed to fetch users:', e);
-    }
-  };
-
+  // -----------------------------------------
+  // LIKE / UNLIKE
+  // -----------------------------------------
   const handleToggleLike = async () => {
     try {
       if (isLiked) {
@@ -50,33 +69,42 @@ export default function PinDetailModal({
         setIsLiked(false);
         setLikeCount(prev => prev - 1);
       } else {
-        const likePayload = {
+        const payload = {
           pin: { pinId: pin.pinId },
           user: { userId: currentUser.userId },
           createdDate: new Date().toISOString(),
         };
-        await apiFetch('/likes', { method: 'POST', body: JSON.stringify(likePayload) });
+        await apiFetch('/likes', { method: 'POST', body: JSON.stringify(payload) });
         setIsLiked(true);
         setLikeCount(prev => prev + 1);
       }
 
-      if (onPinUpdated) onPinUpdated();
+      if (onPinUpdated) onPinUpdated(pin);
+
     } catch (e) {
       console.error(e);
       setMessage({ type: 'error', text: 'Failed to toggle like.' });
     }
   };
 
+  // -----------------------------------------
+  // COMMENT INPUT + MENTIONS
+  // -----------------------------------------
   const handleCommentChange = e => {
     const value = e.target.value;
     setNewComment(value);
 
     const lastAtIndex = value.lastIndexOf('@');
+
     if (lastAtIndex !== -1 && (lastAtIndex === 0 || value[lastAtIndex - 1] === ' ')) {
       const searchTerm = value.slice(lastAtIndex + 1).toLowerCase();
-      const filtered = allUsers.filter(user =>
-        user.username.toLowerCase().startsWith(searchTerm) && user.userId !== currentUser.userId
+
+      const filtered = allUsers.filter(
+        user =>
+          user.username.toLowerCase().startsWith(searchTerm) &&
+          user.userId !== currentUser.userId
       );
+
       setFilteredUsers(filtered);
       setMentionStart(lastAtIndex);
       setShowSuggestions(filtered.length > 0);
@@ -86,14 +114,18 @@ export default function PinDetailModal({
   };
 
   const handleSelectUser = user => {
-    const beforeMention = newComment.slice(0, mentionStart);
-    const afterMention = newComment.slice(mentionStart).replace(/@\w*/, `@${user.username} `);
-    setNewComment(beforeMention + afterMention);
+    const before = newComment.slice(0, mentionStart);
+    const after = newComment.slice(mentionStart).replace(/@\w*/, `@${user.username} `);
+    setNewComment(before + after);
     setShowSuggestions(false);
   };
 
+  // -----------------------------------------
+  // SUBMIT COMMENT
+  // -----------------------------------------
   const handleAddComment = async () => {
     if (newComment.trim() === '') return;
+
     try {
       const payload = {
         text: newComment,
@@ -101,128 +133,158 @@ export default function PinDetailModal({
         user: { userId: currentUser.userId },
         createdDate: new Date().toISOString(),
       };
-      const newCmt = await apiFetch('/comments', { method: 'POST', body: JSON.stringify(payload) });
+
+      const newCmt = await apiFetch('/comments', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
       setComments([...comments, { ...newCmt, user: currentUser }]);
       setNewComment('');
+
       setMessage({ type: 'success', text: 'Comment added!' });
+
     } catch (e) {
+      console.error(e);
       setMessage({ type: 'error', text: 'Failed to add comment.' });
     }
   };
 
+  // -----------------------------------------
+  // MENTION RENDERER (Clickable usernames)
+  // -----------------------------------------
   const renderCommentWithMentions = text => {
     const parts = text.split(/(@\w+)/g);
-    return parts.map((part, idx) => {
+
+    return parts.map((part, i) => {
       if (part.startsWith('@')) {
         const username = part.slice(1);
-        const mentionedUser = allUsers.find(u => u.username === username);
+        const user = allUsers.find(u => u.username === username);
+
         return (
           <span
-            key={idx}
-            onClick={e => {
-              e.stopPropagation();
-              if (mentionedUser) setSelectedUserProfile(mentionedUser);
-            }}
+            key={i}
             className="text-red-600 font-semibold cursor-pointer hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (user) setSelectedUserProfile(user);
+            }}
           >
             {part}
           </span>
         );
       }
-      return <span key={idx}>{part}</span>;
+      return <span key={i}>{part}</span>;
     });
   };
 
   const handleUserClick = user => setSelectedUserProfile(user);
 
+  // -----------------------------------------
+  // RENDER UI
+  // -----------------------------------------
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl relative">
 
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-700 z-10 transition"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white hover:bg-gray-100"
           >
             <X className="w-6 h-6" />
           </button>
 
           <div className="flex flex-1 overflow-hidden">
-            {/* Image */}
+
+            {/* IMAGE */}
             <div className="w-full lg:w-1/2 p-4 flex-shrink-0">
-              <div className="h-full bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+              <div className="h-full bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center">
                 <img
                   src={pin.imageURL}
                   alt={pin.title}
                   className="w-full h-full object-cover"
-                  onError={e => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/9CA3AF/ffffff?text=Error'; }}
                 />
               </div>
             </div>
 
-            {/* Content */}
+            {/* CONTENT */}
             <div className="w-full lg:w-1/2 flex flex-col p-6 overflow-y-auto">
-              <h1 className="text-3xl font-extrabold text-gray-800 mb-2">{pin.title}</h1>
+
+              <h1 className="text-3xl font-extrabold text-gray-800 mb-2">
+                {pin.title}
+              </h1>
+
               <p className="text-gray-600 mb-6">{pin.description}</p>
 
-              {/* Author */}
+              {/* AUTHOR */}
               <div
-                className="flex items-center gap-3 mb-6 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition"
                 onClick={() => handleUserClick(pin.user)}
+                className="flex items-center gap-3 mb-6 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
               >
                 <img
-                  src={pin.user?.profilePicture || 'https://placehold.co/48x48/A855F7/ffffff?text=U'}
-                  alt={pin.user?.username}
+                  src={pin.user?.profilePicture || 'https://placehold.co/48x48/AAA/fff?text=U'}
+                  alt={`${pin.user?.username}'s profile`}
                   className="w-10 h-10 rounded-full object-cover ring-2 ring-yellow-400"
                 />
                 <div>
-                  <p className="font-bold text-gray-800 text-sm hover:text-red-600">{pin.user?.username || 'Unknown User'}</p>
-                  <p className="text-xs text-gray-500">{new Date(pin.createdDate).toLocaleDateString()}</p>
+                  <p className="font-bold text-sm">{pin.user?.username}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(pin.createdDate).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* ACTIONS */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="flex items-center text-gray-600">
-                  <Heart className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
+                <div className="flex items-center">
+                  <Heart className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-red-500' : ''}`} />
                   <span className="ml-1 text-sm">{likeCount} Likes</span>
                 </div>
-                <div className="flex items-center text-gray-600">
-                  <MessageCircle className="w-5 h-5 text-gray-400" />
+
+                <div className="flex items-center">
+                  <MessageCircle className="w-5 h-5" />
                   <span className="ml-1 text-sm">{comments.length} Comments</span>
                 </div>
+
                 <button
                   onClick={handleToggleLike}
-                  className={`flex items-center gap-1 ml-auto px-4 py-2 rounded-full font-semibold transition ${isLiked ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  className={`ml-auto px-4 py-2 rounded-full font-semibold transition ${
+                    isLiked
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
                 >
-                  <Heart className="w-4 h-4 fill-current" /> {isLiked ? 'Liked' : 'Like'}
+                  <Heart className="w-4 h-4 inline-block mr-1" />
+                  {isLiked ? 'Liked' : 'Like'}
                 </button>
               </div>
 
-              {/* Comments */}
+              {/* COMMENTS */}
               <div className="flex-1 overflow-y-auto pr-2">
-                <h2 className="text-xl font-bold text-gray-800 mb-3 border-b pb-2">Comments</h2>
+                <h2 className="text-lg font-bold mb-3">Comments</h2>
+
                 <div className="space-y-4">
                   {comments.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No comments yet. Be the first!</p>
+                    <p className="text-gray-500 text-sm">No comments yet.</p>
                   ) : (
                     comments.map(comment => (
                       <div key={comment.commentId} className="flex gap-3">
                         <img
-                          src={comment.user?.profilePicture || 'https://placehold.co/40x40/A855F7/ffffff?text=U'}
-                          alt={comment.user?.username}
-                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-red-400 transition"
+                          src={comment.user?.profilePicture || 'https://placehold.co/40x40/AAA/fff?text=U'}
+                          alt={`${comment.user?.username}'s profile`}
+                          className="w-8 h-8 rounded-full cursor-pointer"
                           onClick={() => handleUserClick(comment.user)}
                         />
                         <div className="bg-gray-100 p-3 rounded-xl flex-1">
                           <p
-                            className="font-bold text-gray-800 text-sm mb-1 cursor-pointer hover:text-red-600"
+                            className="font-bold text-sm cursor-pointer"
                             onClick={() => handleUserClick(comment.user)}
                           >
-                            {comment.user?.username || 'Unknown'}
+                            {comment.user.username}
                           </p>
-                          <p className="text-gray-700">{renderCommentWithMentions(comment.text)}</p>
+                          <p>{renderCommentWithMentions(comment.text)}</p>
                         </div>
                       </div>
                     ))
@@ -230,10 +292,12 @@ export default function PinDetailModal({
                 </div>
               </div>
 
-              {/* Add Comment */}
+              {/* ADD COMMENT */}
               <div className="border-t p-4 bg-white relative">
+
+                {/* MENTION DROPDOWN */}
                 {showSuggestions && (
-                  <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+                  <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredUsers.map(user => (
                       <div
                         key={user.userId}
@@ -241,12 +305,12 @@ export default function PinDetailModal({
                         className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer"
                       >
                         <img
-                          src={user.profilePicture || 'https://placehold.co/32x32/A855F7/ffffff?text=U'}
-                          alt={user.username}
-                          className="w-8 h-8 rounded-full object-cover"
+                          src={user.profilePicture || 'https://placehold.co/32x32/AAA/fff?text=U'}
+                          alt={`${user.username}'s profile`}
+                          className="w-8 h-8 rounded-full"
                         />
                         <div>
-                          <p className="font-semibold text-sm text-gray-800">{user.username}</p>
+                          <p className="font-semibold text-sm">{user.username}</p>
                           <p className="text-xs text-gray-500">{user.email}</p>
                         </div>
                       </div>
@@ -256,39 +320,45 @@ export default function PinDetailModal({
 
                 <div className="flex gap-2">
                   <input
-                    type="text"
-                    placeholder="Add a comment... (type @ to mention users)"
                     value={newComment}
                     onChange={handleCommentChange}
                     onKeyPress={e => e.key === 'Enter' && !showSuggestions && handleAddComment()}
-                    className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                    className="flex-1 p-3 border rounded-xl"
+                    placeholder="Add a comment... (@ to mention)"
                   />
+
                   <button
                     onClick={handleAddComment}
-                    disabled={newComment.trim() === ''}
-                    className={`p-3 rounded-xl transition ${newComment.trim() === '' ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-lg'}`}
+                    disabled={!newComment.trim()}
+                    className={`p-3 rounded-xl ${
+                      newComment.trim()
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-300 cursor-not-allowed'
+                    }`}
                   >
                     <Send className="w-5 h-5" />
                   </button>
                 </div>
+
               </div>
 
             </div>
           </div>
-        </div>
 
-        {/* USER PROFILE MODAL */}
-        {selectedUserProfile && (
-          <UserProfileModal
-            user={selectedUserProfile}
-            currentUser={currentUser}
-            apiFetch={apiFetch}
-            setMessage={setMessage}
-            onClose={() => setSelectedUserProfile(null)}
-            onPinClick={() => {}}
-            compactView={true} // optional
-          />
-        )}
+          {/* USER PROFILE MODAL */}
+          {selectedUserProfile && (
+            <UserProfileModal
+              user={selectedUserProfile}
+              currentUser={currentUser}
+              apiFetch={apiFetch}
+              setMessage={setMessage}
+              onClose={() => setSelectedUserProfile(null)}
+              onPinClick={() => {}}
+              compactView={true}
+            />
+          )}
+
+        </div>
       </div>
     </>
   );

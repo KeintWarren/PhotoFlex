@@ -1,13 +1,13 @@
-    import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Save, User, Mail, Lock, Image, FileText } from 'lucide-react';
 
 export default function Settings({ currentUser, setCurrentUser, apiFetch, setMessage }) {
   const [formData, setFormData] = useState({
-    username: currentUser.username,
-    email: currentUser.email,
+    username: currentUser.username || '',
+    email: currentUser.email || '',
     password: '',
-    bio: currentUser.bio,
-    profilePicture: currentUser.profilePicture,
+    bio: currentUser.bio || '',
+    profilePicture: currentUser.profilePicture || 'https://placehold.co/100x100/A855F7/ffffff?text=U',
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -17,22 +17,37 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
     setIsLoading(true);
 
     try {
-      // Only include password if user entered a new one
+      // Build update data
       const updateData = {
-        ...formData,
-        password: formData.password || currentUser.password,
+        username: formData.username,
+        email: formData.email,
+        bio: formData.bio,
+        profilePicture: formData.profilePicture,
+        createdDate: currentUser.createdDate, // Preserve creation date
       };
+
+      // Only include password if user wants to change it
+      if (formData.password && formData.password.trim() !== '') {
+        updateData.password = formData.password;
+      }
+      // Don't include password field at all if not changing it
+
+      console.log('Updating user with data:', updateData);
 
       const updatedUser = await apiFetch(`/users/${currentUser.userId}`, {
         method: 'PUT',
         body: JSON.stringify(updateData),
       });
 
+      console.log('Update successful:', updatedUser);
+
+      // Update both local state and session storage
       setCurrentUser(updatedUser);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setFormData({ ...formData, password: '' }); // Clear password field
     } catch (e) {
-      setMessage({ type: 'error', text: 'Failed to update profile.' });
+      console.error('Failed to update profile:', e);
+      setMessage({ type: 'error', text: `Failed to update profile: ${e.message}` });
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +64,9 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Username */}
           <div>
-            <label htmlFor="username" className={labelClass}><User className="w-4 h-4"/> Username</label>
+            <label htmlFor="username" className={labelClass}>
+              <User className="w-4 h-4"/> Username
+            </label>
             <input
               type="text"
               id="username"
@@ -63,7 +80,9 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className={labelClass}><Mail className="w-4 h-4"/> Email</label>
+            <label htmlFor="email" className={labelClass}>
+              <Mail className="w-4 h-4"/> Email
+            </label>
             <input
               type="email"
               id="email"
@@ -77,7 +96,9 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className={labelClass}><Lock className="w-4 h-4"/> Change Password</label>
+            <label htmlFor="password" className={labelClass}>
+              <Lock className="w-4 h-4"/> Change Password
+            </label>
             <input
               type="password"
               id="password"
@@ -86,11 +107,16 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
               className={inputClass}
               placeholder="Leave blank to keep current password"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter a new password only if you want to change it
+            </p>
           </div>
 
           {/* Bio */}
           <div>
-            <label htmlFor="bio" className={labelClass}><FileText className="w-4 h-4"/> Bio</label>
+            <label htmlFor="bio" className={labelClass}>
+              <FileText className="w-4 h-4"/> Bio
+            </label>
             <textarea
               id="bio"
               rows="3"
@@ -103,7 +129,9 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
 
           {/* Profile Picture URL */}
           <div>
-            <label htmlFor="profilePicture" className={labelClass}><Image className="w-4 h-4"/> Profile Picture URL</label>
+            <label htmlFor="profilePicture" className={labelClass}>
+              <Image className="w-4 h-4"/> Profile Picture URL
+            </label>
             <input
               type="url"
               id="profilePicture"
@@ -113,6 +141,9 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
               className={inputClass}
               placeholder="https://example.com/image.jpg"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Use a direct link to an image (e.g., from Imgur, imgbb, or placehold.co)
+            </p>
           </div>
 
           {/* Submit Button */}
@@ -141,6 +172,9 @@ export default function Settings({ currentUser, setCurrentUser, apiFetch, setMes
               month: 'long',
               day: 'numeric',
             })}
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
+            <strong>User ID:</strong> {currentUser.userId}
           </p>
         </div>
       </div>

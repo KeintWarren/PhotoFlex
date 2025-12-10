@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Grid, Lock, Globe, Edit2 } from 'lucide-react';
 import CreateBoardModal from './CreateBoardModal';
 import BoardDetailModal from './BoardDetailModal';
@@ -13,13 +13,8 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
   const [selectedPin, setSelectedPin] = useState(null);
   const [editingBoard, setEditingBoard] = useState(null);
 
-  useEffect(() => {
-    fetchBoards();
-    fetchUserPins();
-  }, []);
-
   // Fetch boards for current user with pin stats
-  const fetchBoards = async () => {
+  const fetchBoards = useCallback(async () => {
     try {
       const data = await apiFetch(`/boards/user/${currentUser.userId}`);
       console.log('🎯 Fetched Boards:', data);
@@ -60,17 +55,22 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
       console.error('Failed to fetch boards:', e);
       setMessage({ type: 'error', text: 'Failed to fetch boards.' });
     }
-  };
+  }, [currentUser.userId, apiFetch, setMessage]);
 
   // Fetch pins for current user
-  const fetchUserPins = async () => {
+  const fetchUserPins = useCallback(async () => {
     try {
       const data = await apiFetch(`/pins/user/${currentUser.userId}`);
       setPins(data || []);
     } catch (e) {
       console.error('Failed to fetch user pins:', e);
     }
-  };
+  }, [currentUser.userId, apiFetch]);
+
+  useEffect(() => {
+    fetchBoards();
+    fetchUserPins();
+  }, [fetchBoards, fetchUserPins]);
 
   // Handle pin click to show detail modal
   const handlePinClick = async (pin) => {
@@ -92,7 +92,7 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
   };
 
   // Update board after edits
-  const handleBoardUpdated = (updatedBoard) => {
+  const handleBoardUpdated = () => {
     fetchBoards(); // Refresh all boards to get updated stats
     setEditingBoard(null);
   };
@@ -186,14 +186,14 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
       <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           <img
-            src={currentUser.profilePicture}
+            src={currentUser.profilePicture || 'https://placehold.co/128x128/AAA/fff?text=U'}
             alt={currentUser.username}
             className="w-32 h-32 rounded-full object-cover ring-4 ring-yellow-400 shadow-xl"
           />
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-4xl font-extrabold text-gray-800 mb-2">{currentUser.username}</h1>
             <p className="text-gray-600 text-lg mb-3">{currentUser.email}</p>
-            <p className="text-gray-500 italic max-w-2xl">{currentUser.bio}</p>
+            <p className="text-gray-500 italic max-w-2xl">{currentUser.bio || 'No bio yet'}</p>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-6 mt-6">
               <div className="text-center">
@@ -249,7 +249,7 @@ export default function Profile({ currentUser, apiFetch, setMessage }) {
           apiFetch={apiFetch}
           setMessage={setMessage}
           onClose={() => setShowCreateBoard(false)}
-          onBoardCreated={(newBoard) => {
+          onBoardCreated={() => {
             fetchBoards(); // Refresh to get stats
             setShowCreateBoard(false);
           }}
