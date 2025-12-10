@@ -47,10 +47,23 @@ public class UserService {
         return userRepository.findById(id).map(user -> {
             user.setUsername(updatedUser.getUsername());
             user.setEmail(updatedUser.getEmail());
-            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+
+            // Only update password if a new one is provided
+            String newPassword = updatedUser.getPassword();
+            if (newPassword != null && !newPassword.isEmpty()) {
+                // It's a new plain text password, encode it
+                user.setPassword(passwordEncoder.encode(newPassword));
+            }
+            // If newPassword is null or empty, keep the existing password unchanged
+
             user.setProfilePicture(updatedUser.getProfilePicture());
             user.setBio(updatedUser.getBio());
-            user.setCreatedDate(updatedUser.getCreatedDate());
+
+            // Don't update createdDate - preserve the original
+            if (updatedUser.getCreatedDate() != null) {
+                user.setCreatedDate(updatedUser.getCreatedDate());
+            }
+
             return userRepository.save(user);
         }).orElseThrow(() -> new RuntimeException("User not found with id " + id));
     }

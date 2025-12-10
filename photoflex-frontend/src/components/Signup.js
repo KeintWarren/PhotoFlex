@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Check } from 'lucide-react';
 
-export default function Signup({ onSignup, onSwitch }) {
+export default function Signup({ onSignup }) {
+  const navigate = useNavigate();
+
   const [signupData, setSignupData] = useState({
     username: '',
     email: '',
@@ -43,7 +46,7 @@ export default function Signup({ onSignup, onSwitch }) {
     4: "Strong",
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (signupData.password.length < 6) {
@@ -57,7 +60,7 @@ export default function Signup({ onSignup, onSwitch }) {
     }
 
     setError("");
-    onSignup(signupData);
+    await onSignup(signupData, navigate);
   };
 
   return (
@@ -135,7 +138,7 @@ export default function Signup({ onSignup, onSwitch }) {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-4 text-gray-500"
               >
-                {showPassword ? <EyeOff /> : <Eye />}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
 
@@ -177,12 +180,12 @@ export default function Signup({ onSignup, onSwitch }) {
                 onClick={() => setShowConfirmPw(!showConfirmPw)}
                 className="absolute right-4 top-4 text-gray-500"
               >
-                {showConfirmPw ? <EyeOff /> : <Eye />}
+                {showConfirmPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
 
               {/* Green check if match */}
               {confirmPassword && signupData.password === confirmPassword && (
-                <Check className="absolute right-12 top-4 text-green-600" />
+                <Check className="absolute right-12 top-4 text-green-600 w-5 h-5" />
               )}
             </div>
 
@@ -192,20 +195,19 @@ export default function Signup({ onSignup, onSwitch }) {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:scale-[1.02] transition-transform"
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition duration-300"
           >
             Create Account
           </button>
 
           <p className="text-center text-sm text-gray-600 mt-6">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={onSwitch}
+            Already have an account?{' '}
+            <Link
+              to="/login"
               className="text-red-600 font-semibold hover:underline"
             >
               Sign In
-            </button>
+            </Link>
           </p>
         </form>
       </div>

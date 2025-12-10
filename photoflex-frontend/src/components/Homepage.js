@@ -3,6 +3,7 @@ import { Plus, Search } from "lucide-react";
 import CreatePinModal from "./CreatePinModal";
 import PinDetailModal from "./PinDetailModal";
 import BoardDetailModal from "./BoardDetailModal";
+import PinCard from "./PinCard";
 
 export default function Homepage({ currentUser, apiFetch, setMessage }) {
   const [pins, setPins] = useState([]);
@@ -42,6 +43,12 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
   }, [currentUser, apiFetch]);
 
   const handlePinClick = async (pin) => {
+    // CRITICAL FIX: Add check for valid pin object
+    if (!pin || !pin.pinId) {
+        console.error("Attempted to click on an invalid pin object.", pin);
+        return;
+    }
+
     try {
       const pinDetails = await apiFetch(`/pins/${pin.pinId}`);
       const likeCount = await apiFetch(`/likes/pin/${pin.pinId}/count`);
@@ -55,37 +62,11 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
     }
   };
 
-  const PinCard = ({ pin }) => (
-    <div
-      className="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer group transform hover:scale-[1.02] transition-all duration-300"
-      onClick={() => handlePinClick(pin)}
-    >
-      <div className="w-full h-64 overflow-hidden">
-        <img
-          src={
-            pin.imageURL ||
-            "https://placehold.co/600x400/3B82F6/ffffff?text=No+Image"
-          }
-          alt={pin.title || "Pin image"}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      <div className="p-4 h-28 flex flex-col justify-between">
-        <h3 className="font-bold text-gray-800 text-lg truncate">
-          {pin.title}
-        </h3>
-        <p className="text-gray-600 text-sm line-clamp-2">
-          {pin.description}
-        </p>
-      </div>
-    </div>
-  );
-
   const filteredPins = pins.filter(
     (pin) =>
-      pin.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pin.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      pin && // <-- Added a check here for robustness, although PinCard uses `pin.pinId` for key
+      (pin.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pin.description?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -126,8 +107,9 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
           className="grid gap-6"
           style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))" }}
         >
-          {filteredPins.map((pin) => (
-            <PinCard key={pin.pinId} pin={pin} />
+          {/* Added filter to pins array for maximum safety */}
+          {filteredPins.filter(pin => pin && pin.pinId).map((pin) => (
+            <PinCard key={pin.pinId} pin={pin} handlePinClick={handlePinClick}/>
           ))}
         </div>
       ) : (
@@ -167,10 +149,14 @@ export default function Homepage({ currentUser, apiFetch, setMessage }) {
           setMessage={setMessage}
           onClose={() => setSelectedPin(null)}
           onPinUpdated={(updatedPin) => {
-            setSelectedPin(updatedPin);
-            setPins((prev) =>
-              prev.map((p) => (p.pinId === updatedPin.pinId ? updatedPin : p))
-            );
+            // Check if updatedPin is valid before using it
+            const pinToUpdate = updatedPin || selectedPin;
+            if (pinToUpdate && pinToUpdate.pinId) {
+                setSelectedPin(pinToUpdate);
+                setPins((prev) =>
+                    prev.map((p) => (p.pinId === pinToUpdate.pinId ? pinToUpdate : p))
+                );
+            }
           }}
         />
       )}
