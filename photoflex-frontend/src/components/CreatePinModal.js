@@ -26,13 +26,13 @@ export default function CreatePinModal({
 
     try {
       const pinToSave = {
-        title: newPin.title,
-        description: newPin.description,
-        imageURL: newPin.imageURL,
-        user: { userId: currentUser.userId },
-        board: { boardId: parseInt(newPin.boardId) },
-        createdDate: new Date().toISOString(),
-      };
+              title: newPin.title,
+              description: newPin.description,
+              imageURL: newPin.imageURL,
+              userId: currentUser.userId,
+              boardId: parseInt(newPin.boardId),
+              createdDate: new Date().toISOString(),
+            };
 
       const createdPin = await apiFetch('/pins', {
         method: 'POST',

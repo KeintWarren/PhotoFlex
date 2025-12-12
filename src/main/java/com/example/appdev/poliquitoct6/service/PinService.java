@@ -1,87 +1,80 @@
 package com.example.appdev.poliquitoct6.service;
 
+import com.example.appdev.poliquitoct6.dto.PinCreateRequest;
 import com.example.appdev.poliquitoct6.entity.Pin;
+import com.example.appdev.poliquitoct6.entity.User;
+import com.example.appdev.poliquitoct6.entity.Board;
 import com.example.appdev.poliquitoct6.repository.PinRepository;
-import com.example.appdev.poliquitoct6.repository.LikeRepository;
-import com.example.appdev.poliquitoct6.repository.CommentRepository;
+import com.example.appdev.poliquitoct6.repository.UserRepository;
+import com.example.appdev.poliquitoct6.repository.BoardRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class PinService {
 
-    @Autowired
-    private PinRepository pinRepository;
-
-    @Autowired
-    private LikeRepository likeRepository;
-
-    @Autowired
-    private CommentRepository commentRepository;
-
-    // Helper method to add counts to a single pin
-    private Pin addCountsToPin(Pin pin) {
-        int likeCount = likeRepository.countByPin_PinId(pin.getPinId());
-        int commentCount = commentRepository.countByPin_PinId(pin.getPinId());
-        pin.setLikeCount(likeCount);
-        pin.setCommentCount(commentCount);
-        return pin;
-    }
-
-    // Helper method to add counts to a list of pins
-    private List<Pin> addCountsToPins(List<Pin> pins) {
-        return pins.stream()
-                .map(this::addCountsToPin)
-                .collect(Collectors.toList());
-    }
+    @Autowired private PinRepository pinRepository;
+    @Autowired private UserRepository userRepository; // Dependency for fetching User entity
+    @Autowired private BoardRepository boardRepository; // Dependency for fetching Board entity
 
     public List<Pin> getAllPins() {
-        List<Pin> pins = pinRepository.findAll();
-        return addCountsToPins(pins);
+        return pinRepository.findAll();
     }
 
     public Optional<Pin> getPinById(Long id) {
-        Optional<Pin> pin = pinRepository.findById(id);
-        pin.ifPresent(this::addCountsToPin);
-        return pin;
+        return pinRepository.findById(id);
     }
 
     public List<Pin> getPinsByUserId(Long userId) {
-        List<Pin> pins = pinRepository.findByUser_UserId(userId);
-        return addCountsToPins(pins);
+        return pinRepository.findByUser_UserId(userId);
     }
 
     public List<Pin> getPinsByBoardId(Long boardId) {
-        List<Pin> pins = pinRepository.findByBoard_BoardId(boardId);
-        return addCountsToPins(pins);
+        return pinRepository.findByBoard_BoardId(boardId);
     }
 
-    public Pin addPin(Pin pin) {
+    //DTO INTEGRATION (Create)
+    public Pin createPin(PinCreateRequest request) {
+        Pin pin = convertToEntity(request);
         pin.setCreatedDate(LocalDateTime.now());
-        Pin savedPin = pinRepository.save(pin);
-        // Initialize counts to 0 for new pins
-        savedPin.setLikeCount(0);
-        savedPin.setCommentCount(0);
-        return savedPin;
+        return pinRepository.save(pin);
     }
 
     public Pin updatePin(Long id, Pin updatedPin) {
         return pinRepository.findById(id).map(pin -> {
-            pin.setBoard(updatedPin.getBoard());
             pin.setTitle(updatedPin.getTitle());
             pin.setDescription(updatedPin.getDescription());
             pin.setImageURL(updatedPin.getImageURL());
-            Pin saved = pinRepository.save(pin);
-            return addCountsToPin(saved);
+            // Note: Does not allow changing user/board via update
+            return pinRepository.save(pin);
         }).orElseThrow(() -> new RuntimeException("Pin not found with id " + id));
     }
 
     public void deletePin(Long id) {
         pinRepository.deleteById(id);
+    }
+
+    //DTO CONVERSION LOGIC
+    private Pin convertToEntity(PinCreateRequest request) {
+        Pin pin = new Pin();
+
+        pin.setTitle(request.getTitle());
+        pin.setDescription(request.getDescription());
+        pin.setImageURL(request.getImageUrl());
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found for Pin creation with ID " + request.getUserId()));
+
+        Board board = boardRepository.findById(request.getBoardId())
+                .orElseThrow(() -> new RuntimeException("Board not found for Pin creation with ID " + request.getBoardId()));
+
+        pin.setUser(user);
+        pin.setBoard(board);
+
+        return pin;
     }
 }

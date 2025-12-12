@@ -1,8 +1,13 @@
 package com.example.appdev.poliquitoct6.service;
 
+import com.example.appdev.poliquitoct6.dto.CommentCreateRequest;
 import com.example.appdev.poliquitoct6.entity.Comment;
 import com.example.appdev.poliquitoct6.dto.CommentResponse;
+import com.example.appdev.poliquitoct6.entity.Pin;
+import com.example.appdev.poliquitoct6.entity.User;
 import com.example.appdev.poliquitoct6.repository.CommentRepository;
+import com.example.appdev.poliquitoct6.repository.PinRepository;
+import com.example.appdev.poliquitoct6.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +21,10 @@ public class CommentService {
 
     @Autowired
     private CommentRepository commentRepository;
-
+    @Autowired
+    private PinRepository pinRepository; // Assuming you have this
+    @Autowired
+    private UserRepository userRepository;
     public List<Comment> getAllComments() {
         return commentRepository.findAll();
     }
@@ -29,8 +37,21 @@ public class CommentService {
         return commentRepository.findByPin_PinId(pinId);
     }
 
-    public Comment createComment(Comment comment) {
+    public Comment createComment(CommentCreateRequest request) {
+
+        // 1. Fetch Pin and User entities
+        Pin pin = pinRepository.findById(request.getPinId())
+                .orElseThrow(() -> new RuntimeException("Pin not found with ID " + request.getPinId()));
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with ID " + request.getUserId()));
+
+        Comment comment = new Comment();
+        comment.setText(request.getText());
         comment.setCreatedDate(LocalDateTime.now());
+        comment.setPin(pin); // Link the fetched entities
+        comment.setUser(user);
+
         return commentRepository.save(comment);
     }
 

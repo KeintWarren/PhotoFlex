@@ -51,17 +51,39 @@ export default function UserProfileModal({
   };
 
   const formatDate = (dateString) => {
-    try {
       if (!dateString) return "Unknown";
-      if (Array.isArray(dateString)) {
-        const [year, month, day] = dateString;
-        return new Date(year, month - 1, day).toLocaleDateString();
+
+      try {
+        // 1. Array Fallback (if your Jackson occasionally reverts)
+        if (Array.isArray(dateString)) {
+          const [year, month, day] = dateString;
+          return new Date(year, month - 1, day).toLocaleDateString();
+        }
+
+        // 2. ISO String Parsing (The required fix for the current JSON data)
+        if (typeof dateString === 'string') {
+            // Finds the period and truncates the high-precision fraction of a second
+            const periodIndex = dateString.indexOf('.');
+            let cleanDateString = dateString;
+
+            if (periodIndex !== -1) {
+                cleanDateString = dateString.substring(0, periodIndex);
+            }
+
+            // Append 'Z' to treat the date as UTC, ensuring no local timezone shifting occurs
+            if (!cleanDateString.endsWith('Z')) {
+                cleanDateString += 'Z';
+            }
+
+            return new Date(cleanDateString).toLocaleDateString();
+        }
+
+      } catch (e) {
+        console.error("Failed to parse date string:", dateString, e);
+        return "Unknown";
       }
-      return new Date(dateString).toLocaleDateString();
-    } catch {
       return "Unknown";
-    }
-  };
+    };
 
   const isOwnProfile = currentUser.userId === user.userId;
 

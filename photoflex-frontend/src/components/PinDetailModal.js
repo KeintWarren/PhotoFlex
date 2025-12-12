@@ -128,35 +128,33 @@ export default function PinDetailModal({
     if (newComment.trim() === '') return;
 
     try {
-      const payload = {
-        text: newComment,
-        pin: { pinId: pin.pinId },
-        user: { userId: currentUser.userId },
-        createdDate: new Date().toISOString(),
+        const payload = {
+            text: newComment,
+            pinId: pin.pinId,
+            userId: currentUser.userId,
+            createdDate: new Date().toISOString(),
+          };
+
+          const newCmt = await apiFetch('/comments', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+
+          setComments([...comments, {
+            ...newCmt,
+            userId: currentUser.userId,
+            username: currentUser.username,
+            profilePicture: currentUser.profilePicture
+          }]);
+          setNewComment('');
+
+          setMessage({ type: 'success', text: 'Comment added!' });
+
+        } catch (e) {
+          console.error(e);
+          setMessage({ type: 'error', text: 'Failed to add comment.' });
+        }
       };
-
-      const newCmt = await apiFetch('/comments', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      // 🚨 FIX: Ensure locally added comment matches the flat DTO structure
-      setComments([...comments, {
-        ...newCmt,
-        userId: currentUser.userId,
-        username: currentUser.username,
-        // Assuming currentUser has profilePicture directly
-        profilePicture: currentUser.profilePicture
-      }]);
-      setNewComment('');
-
-      setMessage({ type: 'success', text: 'Comment added!' });
-
-    } catch (e) {
-      console.error(e);
-      setMessage({ type: 'error', text: 'Failed to add comment.' });
-    }
-  };
 
   // -----------------------------------------
   // MENTION RENDERER (Clickable usernames)
@@ -298,7 +296,6 @@ export default function PinDetailModal({
                           alt={`${comment.username}'s profile`}
                           className="w-8 h-8 rounded-full cursor-pointer"
                           onClick={() => handleUserClick(comment)}
-                        />
                         />
                         <div className="bg-gray-100 p-3 rounded-xl flex-1">
                           <p

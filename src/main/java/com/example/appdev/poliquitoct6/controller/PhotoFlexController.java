@@ -1,8 +1,6 @@
 package com.example.appdev.poliquitoct6.controller;
 
-import com.example.appdev.poliquitoct6.dto.CommentResponse;
-import com.example.appdev.poliquitoct6.dto.LikeCreateRequest;
-import com.example.appdev.poliquitoct6.dto.LikeResponse;
+import com.example.appdev.poliquitoct6.dto.*;
 import com.example.appdev.poliquitoct6.entity.*;
 import com.example.appdev.poliquitoct6.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,8 +100,10 @@ public class PhotoFlexController {
     }
 
     @PostMapping("/pins")
-    public Pin addPin(@RequestBody Pin pin) {
-        return pinService.addPin(pin);
+    // 🚨 UPDATED: Accepts PinCreateRequest DTO
+    public Pin addPin(@RequestBody PinCreateRequest request) {
+        // Calls the updated service method
+        return pinService.createPin(request);
     }
 
     @PutMapping("/pins/{id}")
@@ -124,8 +124,8 @@ public class PhotoFlexController {
 
     @PostMapping("/comments")
     @ResponseStatus(HttpStatus.CREATED)
-    public Comment createComment(@RequestBody Comment comment) { // Assuming client posts Comment Entity/Request DTO
-        return commentService.createComment(comment);
+    public Comment createComment(@RequestBody CommentCreateRequest request) { // Assuming client posts Comment Entity/Request DTO
+        return commentService.createComment(request);
     }
 
     @PutMapping("/comments/{id}")

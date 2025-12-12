@@ -11,11 +11,11 @@ public class Comment {
     private Long commentId;
 
     @ManyToOne
-    @JoinColumn(name = "pinId", referencedColumnName = "pinId")
+    @JoinColumn(name = "pinId", referencedColumnName = "pinId", nullable = false)
     private Pin pin;
 
     @ManyToOne
-    @JoinColumn(name = "userId", referencedColumnName = "userId")
+    @JoinColumn(name = "userId", referencedColumnName = "userId", nullable = false)
     private User user;
 
     private String text;
