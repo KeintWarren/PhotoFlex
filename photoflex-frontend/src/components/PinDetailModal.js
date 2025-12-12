@@ -33,6 +33,7 @@ export default function PinDetailModal({
 
     const fetchComments = async () => {
       try {
+        // Assuming /comments/pin/{pinId} now returns a List<CommentResponse> with flat user fields
         const data = await apiFetch(`/comments/pin/${pin.pinId}`);
         setComments(data || []);
       } catch (e) {
@@ -63,29 +64,29 @@ export default function PinDetailModal({
   // LIKE / UNLIKE
   // -----------------------------------------
   const handleToggleLike = async () => {
-    try {
-      if (isLiked) {
-        await apiFetch(`/likes/pin/${pin.pinId}/user/${currentUser.userId}`, { method: 'DELETE' });
-        setIsLiked(false);
-        setLikeCount(prev => prev - 1);
-      } else {
-        const payload = {
-          pin: { pinId: pin.pinId },
-          user: { userId: currentUser.userId },
-          createdDate: new Date().toISOString(),
-        };
-        await apiFetch('/likes', { method: 'POST', body: JSON.stringify(payload) });
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
+      try {
+        if (isLiked) {
+          await apiFetch(`/likes/pin/${pin.pinId}/user/${currentUser.userId}`, { method: 'DELETE' });
+          setIsLiked(false);
+          setLikeCount(prev => prev - 1);
+        } else {
+          const payload = {
+            pinId: pin.pinId,
+            userId: currentUser.userId,
+            createdDate: new Date().toISOString(),
+          };
+          await apiFetch('/likes', { method: 'POST', body: JSON.stringify(payload) });
+          setIsLiked(true);
+          setLikeCount(prev => prev + 1);
+        }
+
+        if (onPinUpdated) onPinUpdated(pin);
+
+      } catch (e) {
+        console.error(e);
+        setMessage({ type: 'error', text: 'Failed to toggle like.' });
       }
-
-      if (onPinUpdated) onPinUpdated(pin);
-
-    } catch (e) {
-      console.error(e);
-      setMessage({ type: 'error', text: 'Failed to toggle like.' });
-    }
-  };
+    };
 
   // -----------------------------------------
   // COMMENT INPUT + MENTIONS
@@ -139,7 +140,14 @@ export default function PinDetailModal({
         body: JSON.stringify(payload),
       });
 
-      setComments([...comments, { ...newCmt, user: currentUser }]);
+      // 🚨 FIX: Ensure locally added comment matches the flat DTO structure
+      setComments([...comments, {
+        ...newCmt,
+        userId: currentUser.userId,
+        username: currentUser.username,
+        // Assuming currentUser has profilePicture directly
+        profilePicture: currentUser.profilePicture
+      }]);
       setNewComment('');
 
       setMessage({ type: 'success', text: 'Comment added!' });
@@ -161,13 +169,16 @@ export default function PinDetailModal({
         const username = part.slice(1);
         const user = allUsers.find(u => u.username === username);
 
+        // Construct the object the modal expects for click handling
+        const clickableUser = user ? { userId: user.userId, username: user.username, profilePicture: user.profilePicture } : null;
+
         return (
           <span
             key={i}
             className="text-red-600 font-semibold cursor-pointer hover:underline"
             onClick={(e) => {
               e.stopPropagation();
-              if (user) setSelectedUserProfile(user);
+              if (clickableUser) setSelectedUserProfile(clickableUser);
             }}
           >
             {part}
@@ -178,7 +189,17 @@ export default function PinDetailModal({
     });
   };
 
-  const handleUserClick = user => setSelectedUserProfile(user);
+  // Helper to construct a minimal user object for the modal from flat properties
+  const handleUserClick = (comment) => {
+    if (comment.userId && comment.username) {
+        setSelectedUserProfile({
+            userId: comment.userId,
+            username: comment.username,
+            // Assuming the comment DTO or Pin DTO carries profile picture directly
+            profilePicture: comment.profilePicture || comment.user?.profilePicture // Fallback just in case
+        });
+    }
+  };
 
   // -----------------------------------------
   // RENDER UI
@@ -220,11 +241,11 @@ export default function PinDetailModal({
 
               {/* AUTHOR */}
               <div
-                onClick={() => handleUserClick(pin.user)}
+                onClick={() => handleUserClick(pin)} // Pin object should contain flat user data (userId, username)
                 className="flex items-center gap-3 mb-6 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
               >
                 <img
-                  src={pin.user?.profilePicture || 'https://placehold.co/48x48/AAA/fff?text=U'}
+                  src={pin.user?.profilePicture || 'https://placehold.co/48x48/AAA/fff?text=U'} // Assuming Pin DTO still has nested user for Pin Author
                   alt={`${pin.user?.username}'s profile`}
                   className="w-10 h-10 rounded-full object-cover ring-2 ring-yellow-400"
                 />
@@ -270,21 +291,23 @@ export default function PinDetailModal({
                     <p className="text-gray-500 text-sm">No comments yet.</p>
                   ) : (
                     comments.map(comment => (
+                      // 🚨 FIX: Using flat DTO properties (userId, username, profilePicture)
                       <div key={comment.commentId} className="flex gap-3">
                         <img
-                          src={comment.user?.profilePicture || 'https://placehold.co/40x40/AAA/fff?text=U'}
-                          alt={`${comment.user?.username}'s profile`}
+                          src={comment.profilePicture || 'https://placehold.co/40x40/AAA/fff?text=U'}
+                          alt={`${comment.username}'s profile`}
                           className="w-8 h-8 rounded-full cursor-pointer"
-                          onClick={() => handleUserClick(comment.user)}
+                          onClick={() => handleUserClick(comment)}
+                        />
                         />
                         <div className="bg-gray-100 p-3 rounded-xl flex-1">
                           <p
                             className="font-bold text-sm cursor-pointer"
-                            onClick={() => handleUserClick(comment.user)}
+                            onClick={() => handleUserClick(comment)}
                           >
-                            {comment.user.username}
+                            {comment.username || 'User'}
                           </p>
-                          <p>{renderCommentWithMentions(comment.text)}</p>
+                          <p>{renderCommentWithMentions(comment.text ?? '')}</p>
                         </div>
                       </div>
                     ))

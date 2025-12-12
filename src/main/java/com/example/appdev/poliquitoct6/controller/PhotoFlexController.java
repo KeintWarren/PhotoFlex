@@ -1,8 +1,12 @@
 package com.example.appdev.poliquitoct6.controller;
 
+import com.example.appdev.poliquitoct6.dto.CommentResponse;
+import com.example.appdev.poliquitoct6.dto.LikeCreateRequest;
+import com.example.appdev.poliquitoct6.dto.LikeResponse;
 import com.example.appdev.poliquitoct6.entity.*;
 import com.example.appdev.poliquitoct6.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -56,7 +60,6 @@ public class PhotoFlexController {
         return boardService.getBoardById(id);
     }
 
-    // *** NEW ENDPOINT ADDED ***
     @GetMapping("/boards/user/{userId}")
     public List<Board> getBoardsByUserId(@PathVariable Long userId) {
         return boardService.getBoardsByUserId(userId);
@@ -113,15 +116,16 @@ public class PhotoFlexController {
         pinService.deletePin(id);
     }
 
-    // ===== Comment Endpoints =====
+    // ===== Comment Endpoints (Aligned with final names) =====
     @GetMapping("/comments/pin/{pinId}")
-    public List<Comment> getCommentsByPinId(@PathVariable Long pinId) {
-        return commentService.getCommentsByPinId(pinId);
+    public List<CommentResponse> getCommentsByPinId(@PathVariable Long pinId) {
+        return commentService.getCommentsResponseByPinId(pinId);
     }
 
     @PostMapping("/comments")
-    public Comment addComment(@RequestBody Comment comment) {
-        return commentService.addComment(comment);
+    @ResponseStatus(HttpStatus.CREATED)
+    public Comment createComment(@RequestBody Comment comment) { // Assuming client posts Comment Entity/Request DTO
+        return commentService.createComment(comment);
     }
 
     @PutMapping("/comments/{id}")
@@ -130,11 +134,12 @@ public class PhotoFlexController {
     }
 
     @DeleteMapping("/comments/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteComment(@PathVariable Long id) {
-        commentService.deleteComment(id);
+        commentService.deleteCommentById(id);
     }
 
-    // ===== Like Endpoints =====
+    // ===== Like Endpoints (Aligned with DTOs and final names) =====
     @GetMapping("/likes/pin/{pinId}")
     public List<Like> getLikesByPinId(@PathVariable Long pinId) {
         return likeService.getLikesByPinId(pinId);
@@ -147,16 +152,19 @@ public class PhotoFlexController {
 
     @GetMapping("/likes/pin/{pinId}/user/{userId}")
     public boolean isLikedByUser(@PathVariable Long pinId, @PathVariable Long userId) {
-        return likeService.getLikeByPinAndUser(pinId, userId).isPresent();
+
+        return likeService.checkIsLikedByUser(pinId, userId).isPresent();
     }
 
     @PostMapping("/likes")
-    public Like addLike(@RequestBody Like like) {
-        return likeService.addLike(like);
+    @ResponseStatus(HttpStatus.CREATED)
+    public LikeResponse createLike(@RequestBody LikeCreateRequest request) { // 🚨 Changed return type
+        return likeService.createLike(request);
     }
 
     @DeleteMapping("/likes/pin/{pinId}/user/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeLike(@PathVariable Long pinId, @PathVariable Long userId) {
-        likeService.removeLike(pinId, userId);
+        likeService.deleteLikeByPinAndUser(pinId, userId);
     }
 }
